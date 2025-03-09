@@ -36,6 +36,12 @@ HELLO: (1) - Respond to new connection with server data
     Plugin: String - plugin version
     Exe: String - path to iClone/CC executable
 
+    Notes: after receiving server's Hello, should send a Hello back with:
+            Application: String - Unity application name,
+            Version: String - Unity version,
+            Path: String - local path ,
+            Addon: String - Unity package version
+
 
 DEBUG: (15) - do some diagnostic test
     no data

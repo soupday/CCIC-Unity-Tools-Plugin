@@ -1,0 +1,154 @@
+NONE = 0
+HELLO = 1
+PING = 2
+STOP = 10
+DISCONNECT = 11
+DEBUG = 15
+NOTIFY = 50
+SAVE = 60
+MORPH = 90
+MORPH_UPDATE = 91
+REPLACE_MESH = 95
+MATERIALS = 96
+CHARACTER = 100
+CHARACTER_UPDATE = 101
+PROP = 102
+PROP_UPDATE = 103
+UPDATE_REPLACE = 108
+RIGIFY = 110
+TEMPLATE = 200
+POSE = 210
+POSE_FRAME = 211
+SEQUENCE = 220
+SEQUENCE_FRAME = 221
+SEQUENCE_END = 222
+SEQUENCE_ACK = 223
+LIGHTS = 230
+CAMERA_SYNC = 231
+FRAME_SYNC = 232
+MOTION = 240
+
+
+HELLO: (1) - Respond to new connection with server data
+    Application: String - Application name
+    Version: Int list [major, minor, revision] - Version numbers
+    Path: String - local path where it saves exports (only used as a fallback if the clients local path doesn't exist)
+    Plugin: String - plugin version
+    Exe: String - path to iClone/CC executable
+
+
+DEBUG: (15) - do some diagnostic test
+    no data
+
+
+NOTIFY: (50) - update client with a status message (to display to user)
+    message: String
+
+
+SAVE: (60) - tell client to saved
+    no data
+
+    Notes: Not needed for Unity
+
+
+Actor objects (types: Avatars, Props, Lights, Cameras) are identified by:
+    link_id: for definitive match
+    name & type: if no link_id match found
+
+    Notes:
+    link_id's are generated randomly for actor object when first sent over the DataLink.
+    If not then saved into the project, link_id could be different next time.
+    Hence the fallback to name & type.
+
+
+CHARACTER: (100) - receive character export from server
+    path: String - file path of fbx export file
+    name: String - actor name,
+    type: String - actor type (AVATAR, PROP, LIGHT, CAMERA) - Should be AVATAR (used to verify)
+    link_id: String - actor link id code
+    motion_prefix: String - name to prefix animation names
+
+
+CHARACTER_UPDATE: (101) - send changes to character id data (name, link_id)
+    old_name: String - old character name
+    old_link_id: String - old link id
+    type: String - actor type (AVATAR, PROP, LIGHT, CAMERA) - Should be AVATAR (used to verify)
+    new_name: String - new character name
+    new_link_id: String - new link id
+
+    Notes: Probably not needed for Unity.
+
+
+PROP: (102) - receive prop export from server
+    path: String - file path of fbx export file
+    name: String - actor name,
+    type: String - actor type (AVATAR, PROP, LIGHT, CAMERA) - Should be PROP (used to verify)
+    link_id: String - actor id code
+    motion_prefix: String - name to prefix animation names
+
+
+UPDATE_REPLACE: (108) - receive updated character or prop from server
+    path: String - file path of fbx export file
+    name: String - actor name
+    type: String - actor type (AVATAR, PROP, LIGHT, CAMERA)
+    link_id: String - actor id code
+    replace: Bool - replace entire actor (True) or just the selected parts (False) listed in 'objects'
+    objects: String list - list of object names to replace in the actor with the ones in this fbx export
+
+    Notes: Logistical nightmare.
+
+
+MOTION: (240) - receive animation export for actor from server
+    path: String - file path of motion fbx export file
+    name: String - actor name
+    type: String - actor type (AVATAR, PROP, LIGHT, CAMERA)
+    link_id: String - actor id code
+    fps: Int - frame rate of iclone project
+    start_time: Float - Start time of animation (seconds)
+    end_time: Float - End time of animation (seconds)
+    start_frame: Int - Start frame of animation
+    end_frame: Int - End frame of animation
+    time: Float - current time in iClone scene (seconds)
+    frame: Int - current frame in iClone scene
+    motion_prefix: String - name to prefix animation names
+
+
+LIGHTS: (230) - Sync lights with iClone/CC
+    Much data
+    Notes: TBD, stop gap solution for sending lights to Blender. Needs to send lights as full animated actors.
+           Ignore for now.
+
+
+CAMERA_SYNC: (231) - sync viewport camera with iClone/CC
+    view_camera:
+        link_id: String - actor id code
+        name: String - camera name
+        loc: Float list - (Position Vector) [x, y, z]
+        rot: Float list - (Rotation Quaternion) [x, y, z, w]
+        sca: Float list - (Scale Vector) [x, y, z]
+        fov: Float - Camera FOV
+        fit: String - Camera fit FOV to viewport (HORIZONTAL, VERTICAL)
+        width: Float - Apature width
+        height: Float - Apature height
+        focal_length: Float - Focal length of lens
+        #
+        # I have no idea what the following are, but I send them anyway
+        #
+        min: Float list - (Min Bounds Vector) [x, y, z]
+        max: Float list - (Max Bounds Vector) [x, y, z]
+        center: Float list - (Centre Bounds Vector) [x, y, z]
+        pos: Float list - (Pivot Vector) [x, y, z]
+    pivot: Float list - (Position Vector) [x,y,z] - world position the iClone camera is looking at / pivoting around
+
+    Notes: useful function to sync viewport camera position in Blender
+
+
+FRAME_SYNC: (232) - Sync frame with iClone/CC
+    fps: Int - frame rate of iclone project
+    start_time: Float - Start time of animation (seconds)
+    end_time: Float - End time of animation (seconds)
+    current_time: Float - current time in iClone scene (seconds)
+    start_frame: Int - Start frame of animation
+    end_frame: Int - End frame of animation
+    current_frame: Int - current frame in iClone scene
+

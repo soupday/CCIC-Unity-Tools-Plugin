@@ -63,24 +63,18 @@ class Exporter:
     button_export: QPushButton = None
     check_bakehair: QCheckBox = None
     check_bakeskin: QCheckBox = None
-    check_t_pose: QCheckBox = None
     check_current_pose: QCheckBox = None
     check_current_animation: QCheckBox = None
     check_animation_only: QCheckBox = None
-    check_hik_data: QCheckBox = None
-    check_profile_data: QCheckBox = None
     check_remove_hidden: QCheckBox = None
     radio_export_pose: QRadioButton = None
     radio_export_anim: QRadioButton = None
     option_preset = 0
     option_bakehair = False
     option_bakeskin = False
-    option_t_pose = False
     option_current_pose = False
     option_current_animation = False
     option_animation_only = False
-    option_hik_data = False
-    option_profile_data = False
     option_remove_hidden = False
     label_desc = None
     no_options = False
@@ -100,12 +94,9 @@ class Exporter:
         self.option_preset = prefs.EXPORT_PRESET
         self.option_bakehair = prefs.EXPORT_BAKE_HAIR
         self.option_bakeskin = prefs.EXPORT_BAKE_SKIN
-        self.option_t_pose = prefs.EXPORT_T_POSE
         self.option_current_pose = prefs.EXPORT_CURRENT_POSE
         self.option_current_animation = prefs.EXPORT_CURRENT_ANIMATION
         self.option_animation_only = prefs.EXPORT_MOTION_ONLY
-        self.option_hik_data = prefs.EXPORT_HIK
-        self.option_profile_data = prefs.EXPORT_FACIAL_PROFILE
         self.option_remove_hidden = prefs.EXPORT_REMOVE_HIDDEN
 
         utils.log("======================")
@@ -222,7 +213,7 @@ class Exporter:
 
         qt.label(layout, "Presets:", style=qt.STYLE_TITLE)
 
-        export_options = [ "Selected Models", "Selected Models with Motions", "Blender > Unity"]
+        export_options = [ "Selected Models", "Selected Models with Motions" ]
         self.combo_export_mode = qt.combobox(layout, "Selected Model", options=export_options, update=self.update_combo_export_mode)
         qt.spacing(layout, 8)
         self.label_desc = qt.label(layout, "", "color: #d2ff7b; font: italic 13px", wrap=False)
@@ -243,9 +234,6 @@ class Exporter:
         col = qt.column(layout)
         col.setSpacing(0)
         self.check_remove_hidden = qt.checkbox(col, "Delete Hidden Faces", False)
-        self.check_t_pose = qt.checkbox(col, "Bindpose as T-Pose", False)
-        self.check_hik_data = qt.checkbox(col, "Export HIK Profile", False)
-        self.check_profile_data = qt.checkbox(col, "Export Facial Expression Profile", False)
         self.check_bakehair = qt.checkbox(col, "Bake Hair Diffuse and Specular", False)
         self.check_bakeskin = qt.checkbox(col, "Bake Skin Diffuse", False)
         self.check_animation_only = qt.checkbox(col, "Motion Only", False)
@@ -305,8 +293,6 @@ class Exporter:
             self.preset_mesh_only()
         elif index == 1:
             self.preset_current_pose()
-        elif index == 2:
-            self.preset_unity()
 
     def create_progress_window(self):
         title = "Blender Export"
@@ -324,10 +310,6 @@ class Exporter:
         num_props = len(self.props)
         avatar_steps = 3 # fbx export
         avatar_steps += 1 # add physics
-        if self.option_hik_data:
-            avatar_steps += 1 # add hik
-        if self.option_profile_data:
-            avatar_steps += 2 # add facial profile
         steps = avatar_steps * num_avatars + num_props * 3
         qt.progress_range(self.progress_bar, 0, steps - 1)
         self.window_progress.Show()
@@ -345,24 +327,18 @@ class Exporter:
     def update_options(self):
         self.combo_export_mode.setCurrentIndex(self.option_preset)
         self.label_desc.setText(self.preset_description(self.option_preset))
-        if self.check_hik_data: self.check_hik_data.setChecked(self.option_hik_data)
-        if self.check_profile_data: self.check_profile_data.setChecked(self.option_profile_data)
         if self.check_bakehair: self.check_bakehair.setChecked(self.option_bakehair)
         if self.check_bakeskin: self.check_bakeskin.setChecked(self.option_bakeskin)
-        if self.check_t_pose: self.check_t_pose.setChecked(self.option_t_pose)
         if self.radio_export_pose: self.radio_export_pose.setChecked(self.option_current_pose)
         if self.radio_export_anim: self.radio_export_anim.setChecked(self.option_current_animation)
         if self.check_animation_only: self.check_animation_only.setChecked(self.option_animation_only)
         if self.check_remove_hidden: self.check_remove_hidden.setChecked(self.option_remove_hidden)
         if self.option_preset == 0:
             qt.disable(self.group_export_range, self.check_animation_only)
-            qt.enable(self.check_t_pose)
         elif self.option_preset == 1:
-            qt.disable(self.check_t_pose)
             qt.enable(self.group_export_range, self.check_animation_only)
         elif self.option_preset == 2:
             qt.disable(self.group_export_range, self.check_animation_only)
-            qt.enable(self.check_t_pose)
 
     def fetch_options(self):
         self.option_preset = self.combo_export_mode.currentIndex()
@@ -382,15 +358,6 @@ class Exporter:
         if self.check_animation_only:
             self.option_animation_only = self.check_animation_only.isChecked()
             prefs.EXPORT_MOTION_ONLY = self.option_animation_only
-        if self.check_hik_data:
-            self.option_hik_data = self.check_hik_data.isChecked()
-            prefs.EXPORT_HIK = self.option_hik_data
-        if self.check_profile_data:
-            self.option_profile_data = self.check_profile_data.isChecked()
-            prefs.EXPORT_FACIAL_PROFILE = self.option_profile_data
-        if self.check_t_pose:
-            self.option_t_pose = self.check_t_pose.isChecked()
-            prefs.EXPORT_T_POSE = self.option_t_pose
         if self.check_remove_hidden:
             self.option_remove_hidden = self.check_remove_hidden.isChecked()
             prefs.EXPORT_REMOVE_HIDDEN = self.option_remove_hidden
@@ -411,48 +378,31 @@ class Exporter:
         self.label_desc.setText(self.preset_description(self.option_preset))
         self.option_bakehair = False
         self.option_bakeskin = False
-        self.option_t_pose = False
         self.option_current_pose = False
         self.option_current_animation = False
         self.option_animation_only = False
         self.option_remove_hidden = False
-        if cc.is_cc():
-            self.option_hik_data = True
-            self.option_profile_data = True
-            self.check_non_standard_export()
-        else:
-            self.option_hik_data = False
-            self.option_profile_data = False
         self.update_options()
 
     def preset_current_pose(self):
         self.option_preset = 1
         self.label_desc.setText(self.preset_description(self.option_preset))
-        self.option_t_pose = False
         self.option_current_pose = False
         self.option_current_animation = True
         self.option_animation_only = False
-        self.option_profile_data = False
-        self.option_profile_data = False
         if cc.is_cc():
             self.option_bakehair = False
             self.option_bakeskin = False
             self.option_remove_hidden = False
-            self.option_hik_data = True
-            self.check_non_standard_export()
         else:
             self.option_bakehair = True
             self.option_bakeskin = True
             self.option_remove_hidden = True
-            self.option_hik_data = True
         self.update_options()
 
     def preset_unity(self):
         self.option_preset = 2
         self.label_desc.setText(self.preset_description(self.option_preset))
-        self.option_hik_data = False
-        self.option_profile_data = False
-        self.option_t_pose = True
         self.option_current_pose = False
         self.option_current_animation = False
         self.option_animation_only = False
@@ -471,27 +421,13 @@ class Exporter:
         self.radio_export_pose = None
         self.radio_export_anim = None
         self.check_animation_only = None
-        self.check_hik_data = None
-        self.check_profile_data = None
-        self.check_t_pose = None
         self.check_remove_hidden = None
         if self.window:
             self.window.Close()
         self.window = None
 
-    def check_non_standard_export(self):
-        # non standard characters, especially actorbuild and actorscan
-        # need the facial and HIK profile to come back into CC4
-        if cc.is_cc():
-            for avatar in self.avatars:
-                if cc.is_avatar_non_standard(avatar):
-                    self.option_hik_data = True
-                    self.option_profile_data = True
-                    return
-
     def set_datalink_export(self):
         self.no_options = True
-        self.option_t_pose = False
         self.option_animation_only = False
         if cc.is_cc():
             self.option_bakehair = prefs.CC_BAKE_TEXTURES
@@ -506,9 +442,6 @@ class Exporter:
             else:
                 self.option_current_animation = False
                 self.option_current_pose = False
-            self.option_hik_data = prefs.CC_USE_HIK_PROFILE
-            self.option_profile_data = prefs.CC_USE_FACIAL_PROFILE
-            self.check_non_standard_export()
         else:
             self.option_bakehair = prefs.IC_BAKE_TEXTURES
             self.option_bakeskin = prefs.IC_BAKE_TEXTURES
@@ -522,34 +455,24 @@ class Exporter:
             else:
                 self.option_current_animation = False
                 self.option_current_pose = False
-            self.option_hik_data = prefs.IC_USE_HIK_PROFILE
-            self.option_profile_data = prefs.IC_USE_FACIAL_PROFILE
 
     def set_update_replace_export(self, full_avatar=False):
         self.no_options = True
-        self.option_t_pose = False
         self.option_bakehair = prefs.CC_BAKE_TEXTURES
         self.option_bakeskin = prefs.CC_BAKE_TEXTURES
         self.option_remove_hidden = prefs.CC_DELETE_HIDDEN_FACES if full_avatar else False
         self.option_current_animation = False
         self.option_current_pose = False
         self.option_animation_only = False
-        self.option_hik_data = prefs.CC_USE_HIK_PROFILE if full_avatar else False
-        self.option_profile_data = prefs.CC_USE_FACIAL_PROFILE if full_avatar else False
-        if full_avatar:
-            self.check_non_standard_export()
 
     def set_datalink_motion_export(self):
         self.no_options = True
-        self.option_t_pose = False
         self.option_bakehair = False
         self.option_bakeskin = False
         self.option_remove_hidden = False
         self.option_current_animation = True
         self.option_current_pose = False
         self.option_animation_only = True
-        self.option_hik_data = False
-        self.option_profile_data = False
 
     def do_export(self, file_path=None):
         multi_export = (len(self.avatars) + len(self.props) > 1)
@@ -626,24 +549,25 @@ class Exporter:
 
         utils.log(f"Exporting {('Avatar' if is_avatar else 'Prop')} - {obj.GetName()} - FBX: {file_path}")
 
-        options1 = EExportFbxOptions__None
-        options1 = options1 | EExportFbxOptions_AutoSkinRigidMesh
-        options1 = options1 | EExportFbxOptions_RemoveAllUnused
-        options1 = options1 | EExportFbxOptions_ExportPbrTextureAsImageInFormatDirectory
-        options1 = options1 | EExportFbxOptions_ExportRootMotion
+        options1 = (EExportFbxOptions__None | EExportFbxOptions_AutoSkinRigidMesh
+                                            | EExportFbxOptions_RemoveAllUnused
+                                            | EExportFbxOptions_ExportPbrTextureAsImageInFormatDirectory
+                                            | EExportFbxOptions_ExportRootMotion
+                                            | EExportFbxOptions_RemoveUnusedMorph
+                                            | EExportFbxOptions_ExportMetallicAlpha
+                                            | EExportFbxOptions_MergeDiffuseOpacityMap)
+
         if is_avatar:
             if self.option_remove_hidden:
                 options1 = options1 | EExportFbxOptions_RemoveHiddenMesh
-            else:
-                options1 = options1 | EExportFbxOptions_FbxKey
 
-        options2 = EExportFbxOptions2__None
-        options2 = options2 | EExportFbxOptions2_ResetBoneScale
-        options2 = options2 | EExportFbxOptions2_ResetSelfillumination
+        options2 = (EExportFbxOptions2__None | EExportFbxOptions2_UnityPreset
+                                             | EExportFbxOptions2_ResetBoneScale
+                                             | EExportFbxOptions2_YUp
+                                             | EExportFbxOptions2_ExtraWordForUnityAndUnreal)
 
-        options3 = EExportFbxOptions3__None
-        options3 = options3 | EExportFbxOptions3_ExportJson
-        options3 = options3 | EExportFbxOptions3_ExportVertexColor
+        options3 = (EExportFbxOptions3__None | EExportFbxOptions3_ExportJson
+                                             | EExportFbxOptions3_ExportVertexColor)
 
         export_fbx_setting = RExportFbxSetting()
 
@@ -654,7 +578,7 @@ class Exporter:
         if is_avatar:
             export_fbx_setting.EnableBakeDiffuseSpecularFromShader(self.option_bakehair)
             export_fbx_setting.EnableBakeDiffuseFromSkinColor(self.option_bakeskin)
-            export_fbx_setting.EnableBasicBindPose(not self.option_t_pose)
+            #export_fbx_setting.EnableBasicBindPose(True)
 
         export_fbx_setting.SetTextureFormat(EExportTextureFormat_Default)
         export_fbx_setting.SetTextureSize(EExportTextureSize_Original)
@@ -664,6 +588,10 @@ class Exporter:
         start_frame = project_fps.GetFrameIndex(RGlobal.GetStartTime())
         end_frame = project_fps.GetFrameIndex(RGlobal.GetEndTime())
         num_frames = end_frame - start_frame
+
+        # embed T-pose as first animation
+        # required for correct Unity avatar generation
+        export_fbx_setting.SetIncludeMotionPath(utils.get_resource_path("motion", "0_T-Pose.rlMotion"))
 
         if (self.option_current_animation or self.option_current_pose) and num_frames == 0:
             export = "EMPTY_POSE"
@@ -706,6 +634,10 @@ class Exporter:
     def export_motion_fbx(self):
 
         file_path = self.fbx_path
+        dir, file = os.path.split(file_path)
+        name, ext = os.path.splitext(file)
+        if not name.lower().endswith("_motion"):
+            file_path = os.path.join(dir, f"{name}_Motion{ext}")
 
         if self.avatar:
             obj = self.avatar
@@ -717,19 +649,20 @@ class Exporter:
         self.update_progress(0, f"Exporting Motion - {obj.GetName()}", True)
         utils.log(f"Exporting Motion FBX: {file_path}")
 
-        options1 = EExportFbxOptions__None
+        options1 = (EExportFbxOptions__None | EExportFbxOptions_AutoSkinRigidMesh
+                                            | EExportFbxOptions_RemoveAllUnused
+                                            | EExportFbxOptions_ExportRootMotion
+                                            | EExportFbxOptions_RemoveUnusedMorph)
 
-        options1 = options1 | EExportFbxOptions_AutoSkinRigidMesh
-        options1 = options1 | EExportFbxOptions_RemoveAllUnused
         if is_avatar:
             options1 = options1 | EExportFbxOptions_RemoveAllMeshKeepMorph
-        options1 = options1 | EExportFbxOptions_ExportRootMotion
 
-        options2 = EExportFbxOptions2__None
-        options2 = options2 | EExportFbxOptions2_ResetBoneScale
-        options2 = options2 | EExportFbxOptions2_ResetSelfillumination
+        options2 = (EExportFbxOptions2__None | EExportFbxOptions2_UnityPreset
+                                             | EExportFbxOptions2_ResetBoneScale
+                                             | EExportFbxOptions2_YUp
+                                             | EExportFbxOptions2_ExtraWordForUnityAndUnreal)
 
-        options3 = EExportFbxOptions3__None
+        options3 = (EExportFbxOptions3__None)
 
         export_fbx_setting = RExportFbxSetting()
 
@@ -739,10 +672,7 @@ class Exporter:
 
         export_fbx_setting.SetTextureFormat(EExportTextureFormat_Default)
         export_fbx_setting.SetTextureSize(EExportTextureSize_Original)
-        if is_avatar:
-            export_fbx_setting.EnableBasicBindPose(not self.option_t_pose)
-        else:
-            export_fbx_setting.EnableBasicBindPose(True)
+        #export_fbx_setting.EnableBasicBindPose(True)
 
         project_fps = RGlobal.GetFps()
         start_frame = project_fps.GetFrameIndex(RGlobal.GetStartTime())
@@ -750,6 +680,11 @@ class Exporter:
         export_fbx_setting.EnableExportMotion(True)
         export_fbx_setting.SetExportMotionFps(project_fps)
         export_fbx_setting.SetExportMotionRange(RRangePair(start_frame, end_frame))
+
+        # TODO Do we need this? Maybe if the source character is not in Unity project.
+        # embed T-pose as first animation
+        # required for correct Unity avatar generation
+        export_fbx_setting.SetIncludeMotionPath(utils.get_resource_path("motion", "0_T-Pose.rlMotion"))
 
         result = RFileIO.ExportFbxFile(obj, file_path, export_fbx_setting)
 
@@ -784,51 +719,6 @@ class Exporter:
             generation_type = self.avatar.GetGeneration()
             generation = json_data.set_character_generation(generation_type)
             utils.log(f"Avatar Generation: {generation}")
-
-            if self.option_hik_data:
-
-                self.update_progress(0, "Exporting HIK Profile ...", True)
-
-                # Non-standard HIK profile
-                #if self.avatar_type == EAvatarType_NonStandard:
-                utils.log(f"Exporting HIK profile: {self.hik_path}")
-
-                self.avatar.SaveHikProfile(self.hik_path)
-                root_json["HIK"] = {}
-                root_json["HIK"]["Profile_Path"] = os.path.relpath(self.hik_path, self.folder)
-
-                self.update_progress(1, "Exported HIK Profile.", True)
-
-            if self.option_profile_data:
-
-                avatar_type = self.avatar.GetAvatarType()
-
-                # Standard and Non-standard facial profiles
-                if (avatar_type == EAvatarType_NonStandard or
-                    avatar_type == EAvatarType_Standard or
-                    avatar_type == EAvatarType_StandardSeries):
-
-                    self.update_progress(0, "Exporting Facial Profile ...", True)
-
-                    profile_type_string = cc.get_avatar_profile_name(self.avatar)
-
-                    utils.log(f"Exporting Facial Expression profile ({profile_type_string}): {self.profile_path}")
-
-                    facial_profile = self.avatar.GetFacialProfileComponent()
-                    if facial_profile:
-                        facial_profile.SaveProfile(self.profile_path)
-                        root_json["Facial_Profile"] = {}
-                        root_json["Facial_Profile"]["Profile_Path"] = os.path.relpath(self.profile_path, self.folder)
-                        root_json["Facial_Profile"]["Type"] = profile_type_string
-                        categories = facial_profile.GetExpressionCategoryNames()
-                        root_json["Facial_Profile"]["Categories"] = {}
-                        for category in categories:
-                            slider_names = facial_profile.GetExpressionSliderNames(category)
-                            root_json["Facial_Profile"]["Categories"][category] = slider_names
-
-                        self.update_progress(2, "Exported Facial Profile.", True)
-                    else:
-                        self.update_progress(2, "No Facial Profile!", True)
 
             self.update_progress(0, "Exporting Additional Physics ...", True)
 

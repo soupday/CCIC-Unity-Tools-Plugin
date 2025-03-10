@@ -221,10 +221,10 @@ class Preferences(QObject):
 
     def on_show_hide(self, visible):
         if visible:
-            qt.toggle_toolbar_action("Blender Pipeline Toolbar", "Blender Pipeline Settings", True)
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity Pipeline Settings", True)
             self.refresh_ui()
         else:
-            qt.toggle_toolbar_action("Blender Pipeline Toolbar", "Blender Pipeline Settings", False)
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity Pipeline Settings", False)
 
     def detect_settings(self):
         global DATALINK_FOLDER
@@ -507,7 +507,7 @@ def read_temp_state():
 
     res = RLPy.RGlobal.GetPath(RLPy.EPathType_CustomContent, "")
     temp_path = res[1]
-    temp_state_path = os.path.join(temp_path, "ccic_blender_pipeline_plugin.txt")
+    temp_state_path = os.path.join(temp_path, "ccic_unity_pipeline_plugin.txt")
     if os.path.exists(temp_state_path):
         temp_state_json = read_json(temp_state_path)
         if temp_state_json:
@@ -579,7 +579,7 @@ def write_temp_state():
 
     res = RLPy.RGlobal.GetPath(RLPy.EPathType_CustomContent, "")
     temp_path = res[1]
-    temp_state_path = os.path.join(temp_path, "ccic_blender_pipeline_plugin.txt")
+    temp_state_path = os.path.join(temp_path, "ccic_unity_pipeline_plugin.txt")
     temp_state_json = {
         "blender_path": BLENDER_PATH,
         "datalink_folder": DATALINK_FOLDER,

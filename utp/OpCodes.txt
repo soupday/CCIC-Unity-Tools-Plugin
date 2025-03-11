@@ -126,27 +126,21 @@ LIGHTS: (230) - Sync lights with iClone/CC
 
 
 CAMERA_SYNC: (231) - sync viewport camera with iClone/CC
-    view_camera:
-        link_id: String - actor id code
-        name: String - camera name
-        loc: Float list - (Position Vector) [x, y, z]
-        rot: Float list - (Rotation Quaternion) [x, y, z, w]
-        sca: Float list - (Scale Vector) [x, y, z]
-        fov: Float - Camera FOV
-        fit: String - Camera fit FOV to viewport (HORIZONTAL, VERTICAL)
-        width: Float - Apature width
-        height: Float - Apature height
-        focal_length: Float - Focal length of lens
-        #
-        # I have no idea what the following are, but I send them anyway
-        #
-        min: Float list - (Min Bounds Vector) [x, y, z]
-        max: Float list - (Max Bounds Vector) [x, y, z]
-        center: Float list - (Centre Bounds Vector) [x, y, z]
-        pos: Float list - (Pivot Vector) [x, y, z]
-    pivot: Float list - (Position Vector) [x,y,z] - world position the iClone camera is looking at / pivoting around
+    link_id: String - actor id code
+    name: String - camera name
+    loc: Float list - (Position Vector) [x, y, z]
+    rot: Float list - (Rotation Quaternion) [x, y, z, w]
+    sca: Float list - (Scale Vector) [x, y, z]
+    fov: Float - Camera FOV
+    fit: String - Camera fit FOV to viewport (HORIZONTAL, VERTICAL)
+    width: Float - Apature width
+    height: Float - Apature height
+    focal_length: Float - Focal length of lens
+    target: Float list - (Position Vector) [x,y,z] - world position the iClone camera is looking at / pivoting around
 
     Notes: useful function to sync viewport camera position in Blender
+           viewport camera in iClone can be a specific camera placed in the scene, link_id/name refers to that.
+           (not much use to Unity though)
 
 
 FRAME_SYNC: (232) - Sync frame with iClone/CC

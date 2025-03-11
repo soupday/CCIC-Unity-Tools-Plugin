@@ -2564,10 +2564,6 @@ class DataLink(QObject):
             "width": width,
             "height": height,
             "focal_length": focal_length,
-            "min": [min.x, min.y, min.z],
-            "max": [max.x, max.y, max.z],
-            "center": [center.x, center.y, center.z],
-            "pos": [pos.x, pos.y, pos.z],
         }
         return data
 
@@ -2596,11 +2592,8 @@ class DataLink(QObject):
         view_camera: RICamera = RScene.GetCurrentCamera()
         camera_data = self.get_camera_data(view_camera)
         pivot = self.get_selection_pivot()
-        data = {
-            "view_camera": camera_data,
-            "pivot": [pivot.x, pivot.y, pivot.z],
-        }
-        self.send(OpCodes.CAMERA_SYNC, encode_from_json(data))
+        camera_data["target"] = [pivot.x, pivot.y, pivot.z]
+        self.send(OpCodes.CAMERA_SYNC, encode_from_json(camera_data))
         self.send_frame_sync()
 
     def decode_camera_sync_data(self, data):

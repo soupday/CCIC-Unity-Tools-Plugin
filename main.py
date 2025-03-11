@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with CC/iC-Blender-Pipeline-Plugin.  If not, see <https://www.gnu.org/licenses/>.
 
-import RLPy
-from utp import gou, vars, prefs, cc, qt, tests, importer, exporter, morph, link
+
+from utp import prefs, qt, importer, exporter, link
 
 
 rl_plugin_info = { "ap": "iClone", "ap_version": "8.0" }

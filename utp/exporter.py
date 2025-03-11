@@ -21,7 +21,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from shiboken2 import wrapInstance
 import os
-from . import blender, cc, qt, prefs, utils, vars
+from . import cc, qt, prefs, utils, vars
 
 
 class ExporterEventCallback(REventCallback):
@@ -70,12 +70,12 @@ class Exporter:
     radio_export_pose: QRadioButton = None
     radio_export_anim: QRadioButton = None
     option_preset = 0
-    option_bakehair = False
-    option_bakeskin = False
+    option_bakehair = True
+    option_bakeskin = True
     option_current_pose = False
     option_current_animation = False
     option_animation_only = False
-    option_remove_hidden = False
+    option_remove_hidden = True
     label_desc = None
     no_options = False
     # Callback
@@ -206,7 +206,7 @@ class Exporter:
 
     def create_options_window(self):
         W = 400
-        H = 520
+        H = 450
         TITLE = f"Blender Pipeline Export FBX"
         self.window, layout = qt.window(TITLE, width=W, height=H, fixed=True, show_hide=self.on_show_hide)
         self.window.SetFeatures(EDockWidgetFeatures_Closable)
@@ -233,9 +233,9 @@ class Exporter:
 
         col = qt.column(layout)
         col.setSpacing(0)
-        self.check_remove_hidden = qt.checkbox(col, "Delete Hidden Faces", False)
-        self.check_bakehair = qt.checkbox(col, "Bake Hair Diffuse and Specular", False)
-        self.check_bakeskin = qt.checkbox(col, "Bake Skin Diffuse", False)
+        self.check_remove_hidden = qt.checkbox(col, "Delete Hidden Faces", True)
+        self.check_bakehair = qt.checkbox(col, "Bake Hair Diffuse and Specular", True)
+        self.check_bakeskin = qt.checkbox(col, "Bake Skin Diffuse", True)
         self.check_animation_only = qt.checkbox(col, "Motion Only", False)
 
         qt.spacing(layout, 8)
@@ -244,7 +244,7 @@ class Exporter:
         self.button_export = qt.button(layout, "Export", self.do_export, height=40)
 
         if self.option_preset == -1:
-            self.preset_current_pose()
+            self.preset_current_animation()
         else:
             self.update_options()
 
@@ -292,7 +292,7 @@ class Exporter:
         if index == 0:
             self.preset_mesh_only()
         elif index == 1:
-            self.preset_current_pose()
+            self.preset_current_animation()
 
     def create_progress_window(self):
         title = "Blender Export"
@@ -365,11 +365,9 @@ class Exporter:
 
     def preset_description(self, preset):
         if preset == 0:
-            return "For exporting models without animations, in their bind pose"
+            return "For exporting raw models without animations, baked texture or hidden faces, and in their bind pose"
         elif preset == 1:
             return "For exporting models with their animations"
-        elif preset == 2:
-            return "For further editing in Blender before sending on to Unity"
         return "No preset selected!"
 
 
@@ -384,35 +382,15 @@ class Exporter:
         self.option_remove_hidden = False
         self.update_options()
 
-    def preset_current_pose(self):
+    def preset_current_animation(self):
         self.option_preset = 1
         self.label_desc.setText(self.preset_description(self.option_preset))
         self.option_current_pose = False
         self.option_current_animation = True
         self.option_animation_only = False
-        if cc.is_cc():
-            self.option_bakehair = False
-            self.option_bakeskin = False
-            self.option_remove_hidden = False
-        else:
-            self.option_bakehair = True
-            self.option_bakeskin = True
-            self.option_remove_hidden = True
-        self.update_options()
-
-    def preset_unity(self):
-        self.option_preset = 2
-        self.label_desc.setText(self.preset_description(self.option_preset))
-        self.option_current_pose = False
-        self.option_current_animation = False
-        self.option_animation_only = False
+        self.option_bakehair = True
+        self.option_bakeskin = True
         self.option_remove_hidden = True
-        if cc.is_cc():
-            self.option_bakehair = True
-            self.option_bakeskin = True
-        else:
-            self.option_bakehair = True
-            self.option_bakeskin = True
         self.update_options()
 
     def close_options_window(self):

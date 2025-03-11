@@ -21,7 +21,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from shiboken2 import wrapInstance
 import os, time, shutil
-from . import blender, morph, cc, qt, prefs, utils, vars
+from . import cc, qt, prefs, utils, vars
 
 
 FBX_IMPORTER = None
@@ -283,7 +283,6 @@ class Importer:
                 if avatar:
                     utils.log_info(f"Setting Character Name: {self.name}")
                     avatar.SetName(self.name)
-                    morph.poke_morph_zero(avatar)
                     objects = [avatar]
 
             if len(objects) > 0:

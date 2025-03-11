@@ -22,7 +22,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from shiboken2 import wrapInstance
 import os, socket, select, struct, time, json, random, atexit, traceback
-from . import importer, exporter, morph, cc, qt, prefs, tests, utils, vars
+from . import importer, exporter, cc, qt, prefs, tests, utils, vars
 from enum import IntEnum
 import math
 
@@ -1442,6 +1442,7 @@ class DataLink(QObject):
         self.icon_replace_clothing = qt.get_icon("Clothing.png")
 
         grid = qt.grid(layout)
+        grid.setVerticalSpacing(0)
         grid.setColumnStretch(2, 3)
         logo = qt.label(grid, "", row_span=2, width=54, height=54, col=0, row=0)
         logo.setPixmap(qt.get_pixmap("UnityLogo.png"))
@@ -1765,12 +1766,6 @@ class DataLink(QObject):
                 self.host_ip = "127.0.0.1"
             utils.log_info(f"{self.host_name} ({self.host_ip})")
 
-    def update_version(self):
-        if self.combobox_version:
-            index = self.combobox_version.currentIndex()
-            text = self.combobox_version.currentText()
-            prefs.BLENDER_VERSION = text
-
     def update_motion_prefix(self):
         self.motion_prefix = self.textbox_motion_prefix.text()
 
@@ -1787,9 +1782,11 @@ class DataLink(QObject):
             self.label_header.setText(f"Connected to {self.service.remote_app} {self.service.remote_version} ({self.service.remote_addon})")
             self.label_folder.setText(f"{self.get_remote_folder()}")
         elif self.is_listening():
+            my_hostname = get_hostname()
+            my_ip = get_ip()
             self.textbox_host.setEnabled(False)
             self.button_link.setStyleSheet(qt.STYLE_BUTTON_WAITING)
-            self.button_link.setText("Listening ...")
+            self.button_link.setText(f"Listening on {my_hostname} ({my_ip}) ...")
             self.label_header.setText("Waiting for Connection")
             self.label_folder.setText(f"None")
         else:
@@ -1870,15 +1867,6 @@ class DataLink(QObject):
 
         if op_code == OpCodes.CHARACTER:
             self.receive_character_import(data)
-
-        if op_code == OpCodes.MORPH:
-            self.receive_morph(data)
-
-        if op_code == OpCodes.REPLACE_MESH:
-            self.receive_replace_mesh(data)
-
-        if op_code == OpCodes.MATERIALS:
-            self.receive_material_update(data)
 
         if op_code == OpCodes.CAMERA_SYNC:
             self.receive_camera_sync(data)
@@ -3057,66 +3045,6 @@ class DataLink(QObject):
                     self.update_link_status(f"Updating Blender: {actor.name}")
                     self.send_actor_update(actor, name, link_id)
 
-    def receive_morph(self, data):
-        json_data = decode_to_json(data)
-        obj_path = json_data["path"]
-        key_path = json_data["key_path"]
-        name = json_data["name"]
-        character_type = json_data["type"]
-        link_id = json_data["link_id"]
-        morph_name = json_data["morph_name"]
-        morph_path = json_data["morph_path"]
-        actor = LinkActor.find_actor(link_id, search_name=name, search_type=character_type)
-        if actor:
-            avatar: RIAvatar = actor.object
-        morph_slider = morph.MorphSlider(obj_path, key_path)
-
-    def receive_replace_mesh(self, data):
-        json_data = decode_to_json(data)
-        obj_file_path = json_data["path"]
-        actor_name = json_data["actor_name"]
-        obj_name = json_data["object_name"]
-        mesh_name = json_data["mesh_name"]
-        character_type = json_data["type"]
-        link_id = json_data["link_id"]
-        actor = LinkActor.find_actor(link_id, search_name=actor_name, search_type=character_type)
-        if actor:
-            avatar: RIAvatar = actor.object
-            results = cc.find_actor_source_meshes(mesh_name, obj_name, avatar)
-            if results:
-                for cc_mesh_name in results:
-                    utils.log_info(f"Replace Mesh: {obj_name} / {mesh_name} -> {cc_mesh_name}")
-                    status = None
-                    try:
-                        status: RStatus = avatar.ReplaceMesh(cc_mesh_name, obj_file_path)
-                    except:
-                        qt.message_box("Error", "Replace Mesh failed! Make sure you are using CC4 version 4.42.3004.1 or above!")
-                        return
-                    if status == RStatus.Success:
-                        RGlobal.ForceViewportUpdate()
-                        self.update_link_status(f"Replace Mesh: {actor.name} / {cc_mesh_name}")
-                        utils.log_info(f"Replace mesh success!")
-                        return
-                    else:
-                        utils.log_error(f"Replace mesh failed!")
-            qt.message_box("Error", f"Unable to determine source mesh for replacement: {obj_name} / {mesh_name}")
-            return
-        qt.message_box("Error", f"Unable to find actor: {actor_name} / {character_type}")
-        return
-
-    def receive_material_update(self, data):
-        json_data = decode_to_json(data)
-        json_path = json_data["path"]
-        actor_name = json_data["actor_name"]
-        character_type = json_data["type"]
-        link_id = json_data["link_id"]
-        actor = LinkActor.find_actor(link_id, search_name=actor_name, search_type=character_type)
-        if actor:
-            imp = importer.Importer(json_path, no_window=True, json_only=True)
-            imp.update_materials(actor.object)
-            RGlobal.ForceViewportUpdate()
-            self.update_link_status(f"Material Update: {actor.name}")
-
 
 
 
@@ -3150,3 +3078,21 @@ def test():
     utils.log_always("TEST")
     utils.log_always("====")
     tests.test()
+
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        s.connect(("10.254.254.254", 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = "127.0.0.1"
+    finally:
+        s.close()
+    return IP
+
+
+def get_hostname():
+    return socket.gethostname()

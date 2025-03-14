@@ -2109,7 +2109,7 @@ class DataLink(QObject):
             shutil.make_archive(zip_file_name, "zip", export_folder)
             os.chdir(cwd)
             zip_file_path = os.path.join(parent_folder, f"{zip_file_name}.zip")
-            if os.path.exists(zip_file_name):
+            if os.path.exists(zip_file_path):
                 print(f"Name: {actor.name}")
                 print(f"Parent Folder: {parent_folder}")
                 print(f"Export Folder: {export_folder}")

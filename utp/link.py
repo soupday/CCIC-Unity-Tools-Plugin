@@ -2097,7 +2097,7 @@ class DataLink(QObject):
         # TODO export.export_extra_data should add the link_id's for these sub-objects.
         # TODO only add link_id data when using data-link export...
 
-    def send_remote_files(self, actor, export_folder):
+    def send_remote_files(self, name, export_folder):
         link_service = self.get_link_service()
         parent_folder = os.path.dirname(export_folder)
         if link_service.is_remote():
@@ -2110,7 +2110,7 @@ class DataLink(QObject):
             os.chdir(cwd)
             zip_file_path = os.path.join(parent_folder, f"{zip_file_name}.zip")
             if os.path.exists(zip_file_path):
-                print(f"Name: {actor.name}")
+                print(f"Name: {name}")
                 print(f"Parent Folder: {parent_folder}")
                 print(f"Export Folder: {export_folder}")
                 print(f"Zip File Name: {zip_file_name}")

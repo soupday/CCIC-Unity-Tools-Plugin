@@ -1,18 +1,18 @@
-# Copyright (C) 2023 Victor Soupday
-# This file is part of CC/iC-Blender-Pipeline-Plugin <https://github.com/soupday/CC/iC-Blender-Pipeline-Plugin>
+# Copyright (C) 2025 Victor Soupday
+# This file is part of CC/iC-Unity-Pipeline-Plugin <https://github.com/soupday/CCiC-Unity-Pipeline-Plugin>
 #
-# CC/iC-Blender-Pipeline-Plugin is free software: you can redistribute it and/or modify
+# CC/iC-Unity-Pipeline-Plugin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# CC/iC-Blender-Pipeline-Plugin is distributed in the hope that it will be useful,
+# CC/iC-Unity-Pipeline-Plugin is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with CC/iC-Blender-Pipeline-Plugin.  If not, see <https://www.gnu.org/licenses/>.
+# along with CC/iC-Unity-Pipeline-Plugin.  If not, see <https://www.gnu.org/licenses/>.
 
 from RLPy import *
 del abs
@@ -27,10 +27,7 @@ from . import importer, exporter, cc, qt, prefs, tests, utils, vars
 from enum import IntEnum
 import math
 
-LOCALHOST = "127.0.0.1"
-BLENDER_PORT = 9334
-UNITY_PORT = 9335
-RL_PORT = 9333
+SERVER_PORT = 9334
 TIMER_INTERVAL = 1000/60
 MAX_CHUNK_SIZE = 32768
 HANDSHAKE_TIMEOUT_S = 60
@@ -38,11 +35,9 @@ KEEPALIVE_TIMEOUT_S = 300
 PING_INTERVAL_S = 1
 SERVER_ONLY = True
 CLIENT_ONLY = False
-EMPTY_SOCKETS = []
 MAX_RECEIVE = 24
 USE_PING = False
 USE_KEEPALIVE = False
-USE_BLOCKING = False
 SOCKET_TIMEOUT = 5.0
 
 class OpCodes(IntEnum):
@@ -941,7 +936,7 @@ class LinkService(QObject):
     client_sockets = []
     empty_sockets = []
     client_ip: str = "127.0.0.1"
-    client_port: int = UNITY_PORT
+    client_port: int = SERVER_PORT
     is_listening: bool = False
     is_connected: bool = False
     is_connecting: bool = False
@@ -975,9 +970,7 @@ class LinkService(QObject):
     remote_version: str = None
     remote_path: str = None
     remote_package: str = None
-    remote_filename: str = None
     remote_is_local: bool = True
-    remote_file_count: int = 0
     # temp
     temp_path: str = None
 
@@ -998,19 +991,19 @@ class LinkService(QObject):
                 self.keepalive_timer = HANDSHAKE_TIMEOUT_S
                 self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.server_sock.settimeout(SOCKET_TIMEOUT)
-                self.server_sock.bind(('', RL_PORT))
+                self.server_sock.bind(('', SERVER_PORT))
                 self.server_sock.listen(5)
                 #self.server_sock.setblocking(True)
                 self.server_sockets = [self.server_sock]
                 self.is_listening = True
-                utils.log_info(f"Listening on TCP *:{RL_PORT}")
+                utils.log_info(f"Listening on TCP *:{SERVER_PORT}")
                 self.listening.emit()
                 self.changed.emit()
             except:
                 self.server_sock = None
                 self.server_sockets = []
                 self.is_listening = True
-                utils.log_error(f"Unable to start server on TCP *:{RL_PORT}")
+                utils.log_error(f"Unable to start server on TCP *:{SERVER_PORT}")
 
     def stop_server(self):
         if self.server_sock:
@@ -1212,10 +1205,10 @@ class LinkService(QObject):
                 self.remote_version = json_data["Version"]
                 self.remote_path = json_data["Path"]
                 self.remote_package = json_data.get("Package", "x.x.x")
-                self.remote_is_local = json_data.get("Local", False)
-                self.remote_file_count = 0
+                self.remote_is_local = json_data.get("Local", True)
                 utils.log_info(f"Connected to: {self.remote_app} {self.remote_version} / {self.remote_package}")
                 utils.log_info(f"Remote path: {self.remote_path}")
+                utils.log_info(f"Client is connecting {('Locally' if self.remote_is_local else 'Remotely')}")
             self.service_initialize()
             if data:
                 self.changed.emit()
@@ -1360,7 +1353,6 @@ class LinkService(QObject):
                         self.client_sock.send(byte_array)
                 self.ping_timer = PING_INTERVAL_S
                 self.sent.emit()
-
         except:
             utils.log_error("LinkService send failed!")
             traceback.print_exc()
@@ -1418,7 +1410,7 @@ class DataLink(QObject):
     host_name: str = "localhost"
     motion_prefix: str = ""
     host_ip: str = "127.0.0.1"
-    host_port: int = UNITY_PORT
+    host_port: int = SERVER_PORT
     target: str = "Unity"
     # Callback
     callback: LinkEventCallback = None # type: ignore
@@ -1498,9 +1490,6 @@ class DataLink(QObject):
         self.label_folder = qt.label(grid, f"{self.get_remote_folder()}",
                                      row=1, col=2, style=qt.STYLE_RL_BOLD, no_size=True)
 
-        row = qt.row(layout)
-        self.textbox_host = qt.textbox(row, self.host_name, update=self.update_host)
-
         #qt.spacing(layout, 10)
 
         self.label_status = qt.label(layout, "...", style=qt.STYLE_RL_DESC, no_size=True)
@@ -1512,12 +1501,14 @@ class DataLink(QObject):
         self.button_link = qt.button(grid, "Listen", self.link_start, row=0, col=0, toggle=True, value=False, height=48)
         qt.button(grid, "Stop", self.link_stop, row=0, col=1, width=64, height=48)
 
-        qt.label(layout, "Send:")
         grid = qt.grid(layout)
-        grid.setColumnStretch(2, 0)
-        qt.label(grid, f"Action Name Prefix:", row=0, col=0, style=qt.STYLE_TITLE)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(2, 1)
+        qt.label(grid, "Send:", row=0, col=0)
+        qt.label(grid, f"Motion Prefix:", row=0, col=1)
         self.textbox_motion_prefix = qt.textbox(grid, self.motion_prefix,
-                                                row=0, col=1, update=self.update_motion_prefix)
+                                                row=0, col=2, update=self.update_motion_prefix)
+
         grid = qt.grid(layout)
         grid.setColumnStretch(0,1)
         grid.setColumnStretch(1,1)
@@ -1802,26 +1793,12 @@ class DataLink(QObject):
         self.label_status.setText(text)
         #utils.log_info(text)
 
-    def update_host(self):
-        if self.textbox_host:
-            self.host_name = self.textbox_host.text()
-            try:
-                self.host_ip = socket.gethostbyname(self.host_name)
-            except:
-                self.host_ip = "127.0.0.1"
-            utils.log_info(f"{self.host_name} ({self.host_ip})")
-
     def update_motion_prefix(self):
         self.motion_prefix = self.textbox_motion_prefix.text()
-
-    def set_host(self, host_name):
-        self.textbox_host.setText(host_name)
-        self.host_name = host_name
 
     def show_link_state(self):
         link_service = self.get_link_service()
         if self.is_connected():
-            self.textbox_host.setEnabled(False)
             self.button_link.setStyleSheet(qt.STYLE_BUTTON_ACTIVE)
             self.button_link.setText("Linked")
             self.label_header.setText(f"Connected to {link_service.remote_app} {link_service.remote_version} ({link_service.remote_package})")
@@ -1829,13 +1806,11 @@ class DataLink(QObject):
         elif self.is_listening():
             my_hostname = get_hostname()
             my_ip = get_ip()
-            self.textbox_host.setEnabled(False)
             self.button_link.setStyleSheet(qt.STYLE_BUTTON_WAITING)
             self.button_link.setText(f"Listening on {my_hostname} ({my_ip}) ...")
             self.label_header.setText("Waiting for Connection")
             self.label_folder.setText(f"None")
         else:
-            self.textbox_host.setEnabled(True)
             self.button_link.setStyleSheet(qt.STYLE_BUTTON)
             if SERVER_ONLY:
                 self.button_link.setText("Start Server")
@@ -2097,20 +2072,18 @@ class DataLink(QObject):
         # TODO export.export_extra_data should add the link_id's for these sub-objects.
         # TODO only add link_id data when using data-link export...
 
-    def send_remote_files(self, name, export_folder):
+    def send_remote_files(self, export_folder):
         link_service = self.get_link_service()
         parent_folder = os.path.dirname(export_folder)
         if link_service.is_remote():
             remote_id = str(time.time_ns())
             cwd = os.getcwd()
             zip_file_name = remote_id
-            link_service.remote_file_count += 1
             os.chdir(parent_folder)
             shutil.make_archive(zip_file_name, "zip", export_folder)
             os.chdir(cwd)
             zip_file_path = os.path.join(parent_folder, f"{zip_file_name}.zip")
             if os.path.exists(zip_file_path):
-                print(f"Name: {name}")
                 print(f"Parent Folder: {parent_folder}")
                 print(f"Export Folder: {export_folder}")
                 print(f"Zip File Name: {zip_file_name}")
@@ -2137,7 +2110,7 @@ class DataLink(QObject):
         export.do_export(file_path=export_path)
         remote_id = ""
         if self.is_remote():
-             remote_id = self.send_remote_files(actor.name, actor_export_folder)
+             remote_id = self.send_remote_files(actor_export_folder)
         self.send_notify(f"Avatar Import: {actor.name}")
         export_data = encode_from_json({
             "remote_id": remote_id,

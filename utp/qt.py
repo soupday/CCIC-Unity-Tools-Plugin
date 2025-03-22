@@ -41,6 +41,7 @@ STYLE_BLENDER_TOGGLE = """QPushButton { border: 1px solid #505050; }
                           """
 STYLE_BUTTON_WAITING = "background-color: #505050; color: white; font: bold"
 STYLE_BUTTON_ACTIVE = "background-color: #82be0f; color: black; font: bold"
+STYLE_BUTTON_ACTIVE_ALT = "background-color: #dfdf12; color: black; font: bold"
 STYLE_BUTTON_BOLD = "color: white; font: bold 14px"
 STYLE_RL_DESC = "color: #d2ff7b; font: italic 13px"
 STYLE_RL_TITLEBAR = "background-color: #82be0f; color: black; font: bold"

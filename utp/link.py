@@ -1799,8 +1799,12 @@ class DataLink(QObject):
     def show_link_state(self):
         link_service = self.get_link_service()
         if self.is_connected():
-            self.button_link.setStyleSheet(qt.STYLE_BUTTON_ACTIVE)
-            self.button_link.setText("Linked")
+            if self.is_remote():
+                self.button_link.setStyleSheet(qt.STYLE_BUTTON_ACTIVE_ALT)
+                self.button_link.setText(f"Linked ({self.service.client_ip})")
+            else:
+                self.button_link.setStyleSheet(qt.STYLE_BUTTON_ACTIVE)
+                self.button_link.setText("Linked (Local)")
             self.label_header.setText(f"Connected to {link_service.remote_app} {link_service.remote_version} ({link_service.remote_package})")
             self.label_folder.setText(f"{self.get_remote_folder()}")
         elif self.is_listening():
@@ -2075,27 +2079,35 @@ class DataLink(QObject):
     def send_remote_files(self, export_folder):
         link_service = self.get_link_service()
         parent_folder = os.path.dirname(export_folder)
+        remote_id = None
         if link_service.is_remote():
             remote_id = str(time.time_ns())
             cwd = os.getcwd()
             zip_file_name = remote_id
             os.chdir(parent_folder)
+            utils.log_info(f"Packing Remote files: {zip_file_name}")
+            self.update_link_status("Packing Remote files")
             shutil.make_archive(zip_file_name, "zip", export_folder)
             os.chdir(cwd)
             zip_file_path = os.path.join(parent_folder, f"{zip_file_name}.zip")
             if os.path.exists(zip_file_path):
-                print(f"Parent Folder: {parent_folder}")
-                print(f"Export Folder: {export_folder}")
                 print(f"Zip File Name: {zip_file_name}")
+                self.update_link_status("Sending Remote files")
                 link_service.send_file(remote_id, zip_file_path)
-                return remote_id
-        return None
+                self.update_link_status("Files Sent")
+            if os.path.exists(zip_file_path):
+                utils.log_info(f"Cleaning up remote export package: {zip_file_path}")
+                os.remove(zip_file_path)
+            if os.path.exists(export_folder):
+                utils.log_info(f"Cleaning up remote export folder: {export_folder}")
+                shutil.rmtree(export_folder)
+        return remote_id
 
     def send_avatar(self, actor: LinkActor):
         """
         TODO: Send sub object link id's?
         """
-        self.update_link_status(f"Sending Avatar for Import: {actor.name}")
+        self.update_link_status(f"Exporting Avatar: {actor.name}")
         self.send_notify(f"Exporting: {actor.name}")
         export_folder = self.get_export_folder()
         actor_export_folder = self.get_actor_export_folder(actor.name)
@@ -2103,7 +2115,7 @@ class DataLink(QObject):
         export_file = actor.name + ".fbx"
         export_path = os.path.join(actor_export_folder, export_file)
         if not export_path: return
-        utils.log_info(f"Exporting Character: {export_path}")
+        utils.log_info(f"Exporting Path: {export_path}")
         #linked_object = actor.object.GetLinkedObject(RGlobal.GetTime())
         export = exporter.Exporter(actor.object, no_window=True)
         export.set_datalink_export()
@@ -2121,6 +2133,7 @@ class DataLink(QObject):
             "motion_prefix": self.motion_prefix,
         })
         self.send(OpCodes.CHARACTER, export_data)
+        self.update_link_status(f"Avatar Sent: {actor.name}")
 
     def send_prop(self, actor: LinkActor):
         self.update_link_status(f"Sending Prop for Import: {actor.name}")

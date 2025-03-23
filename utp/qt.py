@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Victor Soupday
+# Copyright (C) 2023 Victor Soupday
 # This file is part of CC/iC-Unity-Pipeline-Plugin <https://github.com/soupday/CCiC-Unity-Pipeline-Plugin>
 #
 # CC/iC-Unity-Pipeline-Plugin is free software: you can redistribute it and/or modify
@@ -554,6 +554,92 @@ def spinbox(layout: QLayout, min, max, step, value, style = STYLE_NONE, read_onl
     if update:
         w.valueChanged.connect(update)
     return w
+
+
+class DComboBox(QWidget):
+    combo: QComboBox = None
+    obj = None
+    prop = None
+    default_value = None
+    valueChanged = Signal()
+    no_update: bool = False
+    options: list = None
+
+    def __init__(self, layout: QLayout, obj, prop, value, options: list,
+                       row=-1, col=-1, row_span=1, col_span=1, style="",
+                       update=None):
+        super().__init__()
+        self.obj = obj
+        self.prop = prop
+        value = self.get_value()
+        self.default_value = value
+        self.options = options
+
+        self.combo = QComboBox()
+        self.combo.setStyleSheet(style)
+        if row >= 0 and col >= 0:
+            layout.addWidget(self.combo, row, col, row_span, col_span)
+        else:
+            layout.addWidget(self.combo)
+        if options:
+            for i, option in enumerate(options):
+                if type(option) is list:
+                    self.combo.addItem(option[1])
+                else:
+                    self.combo.addItem(option)
+                    if value == option:
+                        self.combo.setCurrentIndex(i)
+        if update:
+            value.valueChanged.connect(update)
+        self.combo.currentIndexChanged.connect(self.combo_value_changed)
+
+    def update_value(self):
+        value = self.get_value()
+        us = self.no_update
+        self.no_update = True
+        for i, option in enumerate(self.options):
+            if type(option) is list:
+                if value == option[0]:
+                    self.combo.setCurrentIndex(i)
+            else:
+                if value == option:
+                    self.combo.setCurrentIndex(i)
+        self.no_update = us
+
+    def set_value(self, value: float):
+        setattr(self.obj, self.prop, value)
+        us = self.no_update
+        self.no_update = True
+        for i, option in enumerate(self.options):
+            if type(option) is list:
+                if value == option[1]:
+                    self.combo.setCurrentIndex(i)
+            else:
+                if value == option:
+                    self.combo.setCurrentIndex(i)
+        self.no_update = us
+
+    def get_value(self):
+        value = None
+        if self.obj and self.prop:
+            if hasattr(self.obj, self.prop):
+                value = getattr(self.obj, self.prop)
+            else:
+                utils.log_error(f"Object: {self.obj} has no attribute {self.prop}")
+        return value
+
+    def combo_value_changed(self):
+        if not self.no_update:
+            self.no_update = True
+            index = self.combo.currentIndex()
+            option = self.options[index]
+            if type(option) is list:
+                value = option[0]
+            else:
+                value = option
+            setattr(self.obj, self.prop, value)
+            self.valueChanged.emit()
+            self.no_update = False
 
 
 class DFQSliderSpin(QWidget):

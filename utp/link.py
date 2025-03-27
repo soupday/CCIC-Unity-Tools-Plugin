@@ -2238,9 +2238,6 @@ class DataLink(QObject):
             "names": names,
             "types": types,
             "link_ids": link_ids,
-            "motion_prefix": self.motion_prefix,
-            "use_fake_user": self.use_fake_user,
-            "set_keyframes": self.set_keyframes,
         })
         self.send(OpCodes.LIGHTS, export_data)
         self.update_link_status(f"Lights Sent: {names}")
@@ -2268,9 +2265,6 @@ class DataLink(QObject):
             "name": actor.name,
             "type": actor.get_type(),
             "link_id": actor.get_link_id(),
-            "motion_prefix": self.motion_prefix,
-            "use_fake_user": self.use_fake_user,
-            "set_keyframes": self.set_keyframes,
         })
         self.send(OpCodes.CAMERA, export_data)
         self.update_link_status(f"Camera Sent: {actor.name}")

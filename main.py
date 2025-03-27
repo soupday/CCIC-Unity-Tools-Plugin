@@ -50,8 +50,7 @@ def initialize_plugin():
 
     toolbar = qt.find_add_toolbar("Unity Pipeline Toolbar", show_hide=fetch_toolbar_state)
     qt.clear_toolbar(toolbar)
-    qt.add_toolbar_label(toolbar, "UnityLogoIcon.png", None)
-    qt.add_toolbar_action(toolbar, icon_link, "Unity DataLink", action=menu_link, toggle=True)
+    qt.add_toolbar_action(toolbar, icon_unity, "Unity DataLink", action=menu_link, toggle=True)
     qt.add_toolbar_separator(toolbar)
     qt.add_toolbar_action(toolbar, icon_export, "Export to Unity", action=menu_export)
     qt.add_toolbar_separator(toolbar)

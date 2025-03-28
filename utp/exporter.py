@@ -242,10 +242,18 @@ class Exporter:
         if cc.is_light(object):
             ext = ".rlx"
         name = object.GetName()
-        if motion_only:
-            self.fbx_path = os.path.join(base_path, f"{name}_motion{ext}")
-        else:
-            self.fbx_path = os.path.join(base_path, f"{name}{ext}")
+        # ensure unique path names for each export
+        attempt = 0
+        while True:
+            suffix = "" if attempt == 0 else f"_{attempt:03d}"
+            if motion_only:
+                self.fbx_path = os.path.join(base_path, f"{name}{suffix}_motion{ext}")
+            else:
+                self.fbx_path = os.path.join(base_path, f"{name}{suffix}{ext}")
+            if os.path.exists(self.fbx_path):
+                attempt += 1
+            else:
+                break
         self.fbx_file = os.path.basename(self.fbx_path)
         self.folder = os.path.dirname(self.fbx_path)
         self.character_id = os.path.splitext(self.fbx_file)[0]
@@ -553,6 +561,7 @@ class Exporter:
         self.option_animation_only = True
 
     def do_export(self, file_path=None, no_base_folder=False):
+        self.exported_paths = []
         multi_export = (len(self.avatars) + len(self.props) + len(self.lights) + len(self.cameras) > 1)
         single_export = (len(self.avatars) + len(self.props) + len(self.lights) + len(self.cameras) == 1)
         if not file_path:
@@ -621,6 +630,7 @@ class Exporter:
 
         self.close_progress_window()
         self.clear_objects()
+        return self.exported_paths
 
     def export_fbx(self):
         obj = None
@@ -735,6 +745,7 @@ class Exporter:
             utils.log_info(f"Exporting without motion")
 
         result = RFileIO.ExportFbxFile(obj, file_path, export_fbx_setting)
+        self.exported_paths.append(file_path)
 
         if is_avatar:
             self.update_progress(3, f"Exported Avatar Fbx - {obj.GetName()}", True)
@@ -742,7 +753,6 @@ class Exporter:
             self.update_progress(3, f"Exported Prop Fbx - {obj.GetName()}", True)
         else:
             self.update_progress(3, f"Exported Camera Fbx - {obj.GetName()}", True)
-
         self.export_extra_data()
 
     def export_motion_fbx(self):
@@ -811,6 +821,7 @@ class Exporter:
         export_fbx_setting.SetIncludeMotionPath(utils.get_resource_path("motion", "0_T-Pose.rlMotion"))
 
         result = RFileIO.ExportFbxFile(obj, file_path, export_fbx_setting)
+        self.exported_paths.append(file_path)
 
         self.update_progress(1, f"Exported Motion - {obj.GetName()}", True)
 
@@ -980,7 +991,7 @@ class Exporter:
             time = frame_data["time"]
             frame = frame_data["frame"]
             light_data = frame_data["lights"][light_index]
-            frame_bytes = struct.pack("!fI?fffffffffffffffffff",
+            frame_bytes = struct.pack("!II?fffffffffffffffffff",
                                      time,
                                      frame,
                                      light_data["active"],
@@ -1012,6 +1023,8 @@ class Exporter:
 
         with open(self.fbx_path, 'wb') as binary_file:
             binary_file.write(binary_bytes)
+
+        self.exported_paths.append(self.fbx_path)
 
         self.export_extra_data()
 

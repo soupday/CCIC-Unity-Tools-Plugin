@@ -959,6 +959,8 @@ class Exporter:
             utils.log_error(f"Unable to find light in light data: {self.light}")
             return False
 
+        light_data["frame_count"] = num_frames
+
         utils.log_info(f"Exporting Light: {self.light.GetName()}")
 
         binary_bytes = bytearray()
@@ -978,7 +980,7 @@ class Exporter:
             time = frame_data["time"]
             frame = frame_data["frame"]
             light_data = frame_data["lights"][light_index]
-            frame_bytes = struct.pack("!ff?fffffffffffffffffff",
+            frame_bytes = struct.pack("!fI?fffffffffffffffffff",
                                      time,
                                      frame,
                                      light_data["active"],

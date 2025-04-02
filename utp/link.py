@@ -2085,7 +2085,7 @@ class DataLink(QObject):
         remote_id = ""
         if link_service.is_remote():
             parent_folder = os.path.dirname(export_folder)
-            remote_id = utils.timestampnss()
+            remote_id = utils.timestampns()
             cwd = os.getcwd()
             zip_file_name = remote_id
             os.chdir(parent_folder)

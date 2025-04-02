@@ -366,7 +366,7 @@ def make_sub_folder(parent_folder, folder_name):
         return None
 
 
-def timestampnss():
+def timestampns():
     return str(time.time_ns())
 
 

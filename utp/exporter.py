@@ -1094,7 +1094,7 @@ class Exporter:
             time = frame_data["time"]
             frame = frame_data["frame"]
             camera_data = frame_data["cameras"][camera_index]
-            frame_bytes = struct.pack("!IIfffffffffff?fffffff",
+            frame_bytes = struct.pack("!IIfffffffffff?ffffffff",
                                      time,
                                      frame,
                                      camera_data["loc"][0],
@@ -1115,7 +1115,8 @@ class Exporter:
                                      camera_data["dof_near_blur"],
                                      camera_data["dof_far_transition"],
                                      camera_data["dof_near_transition"],
-                                     camera_data["dof_min_blend_distance"]) # Blur Edge Sampling Scale
+                                     camera_data["dof_min_blend_distance"],
+                                     camera_data["fov"]) # Blur Edge Sampling Scale
             frames_bytes.extend(frame_bytes)
         frames_header = struct.pack("!I", len(frames_bytes))
         binary_bytes.extend(frames_header)

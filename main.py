@@ -36,7 +36,7 @@ def initialize_plugin():
     icon_export = qt.get_icon("BlenderExport.png")
     icon_link = qt.get_icon("BlenderDataLink.png")
     icon_settings = qt.get_icon("BlenderSettings.png")
-    icon_unity = qt.get_icon("UnityLogo.png")
+    icon_unity = qt.get_icon("UIcon.png")
 
     # Menu (CC4 & iClone)
     plugin_menu = qt.find_add_plugin_menu("Unity Pipeline")
@@ -103,6 +103,8 @@ def menu_export():
 
 def menu_link():
     data_link = link.get_data_link()
+    if not data_link.is_listening():
+        data_link.link_start()
     if data_link.is_shown():
         data_link.hide()
     else:

@@ -1129,6 +1129,8 @@ def get_selected_avatars():
 def get_selected_sendable(obj: RIObject):
     """Returns the sendable object from the selection object"""
     T = type(obj)
+    if obj.GetName() in ["Preview Camera", "Shadow Catcher"]:
+        return None, None
     prop_or_avatar = find_parent_avatar_or_prop(obj)
     if T is RILight or T is RISpotLight or T is RIPointLight or T is RIDirectionalLight:
         return obj, T
@@ -1147,6 +1149,20 @@ def get_selected_actor_objects():
     selected = RScene.GetSelectedObjects()
     actor_objects = []
     for obj in selected:
+        send_object, T = get_selected_sendable(obj)
+        if send_object and send_object not in actor_objects:
+            actor_objects.append(send_object)
+    return actor_objects
+
+
+def get_all_actor_objects():
+    objects = RScene.FindObjects(EObjectType_Avatar | EObjectType_LightAvatar |
+                                 EObjectType_Prop | EObjectType_MDProp |
+                                 EObjectType_Light | EObjectType_DirectionalLight |
+                                 EObjectType_SpotLight | EObjectType_PointLight |
+                                 EObjectType_Camera)
+    actor_objects = []
+    for obj in objects:
         send_object, T = get_selected_sendable(obj)
         if send_object and send_object not in actor_objects:
             actor_objects.append(send_object)
@@ -1280,11 +1296,6 @@ def find_parent_avatar_or_prop(obj: RIObject):
             if prop.GetID() == node_id:
                 return prop
         node = node.GetParent()
-    #for avatar in avatars:
-    #    print(obj)
-    #    print(avatar.GetClothes())
-    #    if obj in avatar.GetAccessories() or obj in avatar.GetClothes():
-    #        return avatar
     return None
 
 
@@ -1371,10 +1382,11 @@ def set_link_id(obj: RIObject, link_id):
 
 
 def find_object_by_link_id(link_id):
-    objects = RScene.FindObjects(EObjectType_Avatar |
-                                      EObjectType_Prop |
-                                      EObjectType_Light |
-                                      EObjectType_Camera)
+    objects = RScene.FindObjects(EObjectType_Avatar | EObjectType_LightAvatar |
+                                 EObjectType_Prop | EObjectType_MDProp |
+                                 EObjectType_Light | EObjectType_DirectionalLight |
+                                 EObjectType_SpotLight | EObjectType_PointLight |
+                                 EObjectType_Camera)
     for obj in objects:
         if get_link_id(obj) == link_id:
             return obj
@@ -1382,10 +1394,11 @@ def find_object_by_link_id(link_id):
 
 
 def find_object_by_name_and_type(search_name, search_type=None) -> RIObject:
-    objects = RScene.FindObjects(EObjectType_Avatar |
-                                      EObjectType_Prop |
-                                      EObjectType_Light |
-                                      EObjectType_Camera)
+    objects = RScene.FindObjects(EObjectType_Avatar | EObjectType_LightAvatar |
+                                 EObjectType_Prop | EObjectType_MDProp |
+                                 EObjectType_Light | EObjectType_DirectionalLight |
+                                 EObjectType_SpotLight | EObjectType_PointLight |
+                                 EObjectType_Camera)
     for obj in objects:
         if obj.GetName() == search_name:
             if search_type:
@@ -1443,11 +1456,7 @@ def is_avatar_standard(avatar: RIAvatar):
 
 def get_object_type(obj):
     T = type(obj)
-    if T is RIAvatar or T is RILightAvatar:
-        return "AVATAR"
-    elif T is RIProp or T is RIMDProp:
-        return "PROP"
-    elif T is RIAccessory:
+    if T is RIAccessory:
         return "ACCESSORY"
     elif T is RILight or T is RIDirectionalLight or T is RISpotLight or T is RIPointLight:
         return "LIGHT"
@@ -1455,14 +1464,30 @@ def get_object_type(obj):
         return "CAMERA"
     elif T is RIHair:
         return "HAIR"
+    elif T is RICloth:
+        return "CLOTH"
+    elif T is RIAvatar or T is RILightAvatar:
+        return "AVATAR"
+    elif T is RIProp or T is RIMDProp:
+        return "PROP"
     return "NONE"
 
 
+def is_visible(obj: RIProp, time=None):
+    if time is None:
+        time = RGlobal.GetTime()
+    try:
+        return obj.IsVisible(time)
+    except:
+        return True
+
+
 def find_linked_objects(object: RIObject):
-    objects = RScene.FindObjects(EObjectType_Avatar |
-                                      EObjectType_Prop |
-                                      EObjectType_Light |
-                                      EObjectType_Camera)
+    objects = RScene.FindObjects(EObjectType_Avatar | EObjectType_LightAvatar |
+                                 EObjectType_Prop | EObjectType_MDProp |
+                                 EObjectType_Light | EObjectType_DirectionalLight |
+                                 EObjectType_SpotLight | EObjectType_PointLight |
+                                 EObjectType_Camera)
     linked_objects = []
     for obj in objects:
         linked_object = obj.GetLinkedObject()
@@ -1512,10 +1537,11 @@ def find_prop_by_id(prop_id):
     return None
 
 
-def deduplicate_scene():
-    objects = RScene.FindObjects(EObjectType_Avatar |
-                                 EObjectType_Prop |
-                                 EObjectType_Light |
+def deduplicate_scene_objects():
+    objects = RScene.FindObjects(EObjectType_Avatar | EObjectType_LightAvatar |
+                                 EObjectType_Prop | EObjectType_MDProp |
+                                 EObjectType_Light | EObjectType_DirectionalLight |
+                                 EObjectType_SpotLight | EObjectType_PointLight |
                                  EObjectType_Camera)
     names = {}
     ids_done = []
@@ -1527,7 +1553,7 @@ def deduplicate_scene():
             if name not in names:
                 names[name] = 1
             else:
-                print(f"Deduplicating sub-item name: {name}")
+                utils.log_info(f"Deduplicating sub-item name: {name}")
                 count = names[name]
                 names[name] += 1
                 obj.SetName(f"{name}_{count:03d}")
@@ -1574,10 +1600,10 @@ def get_extended_skin_bones(obj, skin_bones: list=None, ignore_pivot=False):
     return skin_bones
 
 
-def get_extended_skin_bones_tree(prop: RIObject):
+def get_extended_skin_bones_tree(avatar_or_prop: RIObject):
 
-    child_objects: list = RScene.FindChildObjects(prop, EObjectType_Prop | EObjectType_Accessory)
-    objects = [prop]
+    child_objects: list = RScene.FindChildObjects(avatar_or_prop, EObjectType_Prop | EObjectType_Accessory)
+    objects = [avatar_or_prop]
     objects.extend(child_objects)
 
     bone_defs = {}
@@ -1600,22 +1626,34 @@ def get_extended_skin_bones_tree(prop: RIObject):
                     if bone_name:
                         bone_def = {
                             "bone": bone,
+                            "id": bone.GetID(),
                             "object": obj,
                             "root": bone.GetID() == root.GetID(),
                             "name": bone_name,
                             "children": [],
+                            "parent": bone.GetParent(),
+                            "SC": SC,
                         }
                         bone_defs[bone.GetID()] = bone_def
                         defs.append(bone_def)
 
+    orphaned = []
     for bone_def in defs:
         bone = bone_def["bone"]
         bone_name = bone_def["name"]
-        parent = bone.GetParent()
+        parent = bone_def["parent"]
         if parent:
             if parent.GetID() in bone_defs:
                 parent_def = bone_defs[parent.GetID()]
                 parent_def["children"].append(bone_def)
+            else:
+                if bone_def != defs[0]:
+                    bone_def["parent"] = None
+                    orphaned.append(bone_def)
+
+    if orphaned:
+        orphaned_names = [ d["name"] for d in orphaned ]
+        utils.log_info(f"Orphaned bone defs: {orphaned_names}")
 
     if defs:
         return defs[0]
@@ -1623,59 +1661,44 @@ def get_extended_skin_bones_tree(prop: RIObject):
         return None
 
 
-def extract_mesh_bones_from_tree(bone_def, mesh_bones=None):
-    if mesh_bones is None:
-        mesh_bones = []
-    to_remove = []
-    for child_def in bone_def["children"]:
-        if child_def["children"]:
-            extract_mesh_bones_from_tree(child_def, mesh_bones)
-        else:
-            bone = child_def["bone"]
-            mesh_bones.append(bone)
-            to_remove.append(child_def)
-    for child_def in to_remove:
-        bone_def["children"].remove(child_def)
-    return mesh_bones
-
-
-def extract_skin_bones_from_tree(bone_def: dict, skin_bones=None, mesh_bones=None, extract_mesh=True):
+def extract_extended_skin_bones(bone_def: dict, skin_bones: list=None, include_transforms=False):
     if skin_bones is None:
         skin_bones = []
-    if mesh_bones is None:
-        mesh_bones = []
-    to_remove = []
-    child_bone: RINode = bone_def["bone"]
-    skin_bones.append(child_bone)
-    children = child_bone.GetChildren()
-    # go through bones in the correct order
-    #       very important to recreate bone structure in Blender,
-    #       as it is impossible to match duplicate bone names
-    #       unless the order and hierarchy of the bones matches the
-    #       exported armature *exactly*.
-    done = []
-    for child in children:
-        for child_def in bone_def["children"]:
-            child_bone = child_def["bone"]
-            if child_def not in done and child_bone.GetID() == child.GetID():
-                if extract_mesh and not child_def["children"]:
-                    mesh_bones.append(child_bone)
-                    to_remove.append(child_def)
-                extract_skin_bones_from_tree(child_def, skin_bones)
-                done.append(child_def)
-                break
-        # bones not explicitly children of the node are sub props
-        for child_def in bone_def["children"]:
-            child_bone = child_def["bone"]
-            if child_def not in done:
-                if extract_mesh and not child_def["children"]:
-                    mesh_bones.append(child_bone)
-                    to_remove.append(child_def)
-                extract_skin_bones_from_tree(child_def, skin_bones)
-                done.append(child_def)
-    for child_def in to_remove:
-        bone_def["children"].remove(child_def)
-    return skin_bones, mesh_bones
+    bone: RINode = bone_def["bone"]
+    skin_bones.append(bone)
+    id_tree = {
+        "name": bone.GetName(),
+        "id": bone.GetID(),
+    }
+    if include_transforms:
+        id_tree["world_transform"] = transform_json(bone.WorldTransform())
+        id_tree["local_transform"] = transform_json(bone.LocalTransform())
+    id_tree["children"] = []
+    for child_def in bone_def["children"]:
+        child_tree = extract_extended_skin_bones(child_def,
+                                                 skin_bones=skin_bones,
+                                                 include_transforms=include_transforms)[1]
+        if child_tree:
+            id_tree["children"].append(child_tree)
+    return skin_bones, id_tree
+
+
+def extract_extended_skin_objects(bone_def: dict, skin_objects: dict= None):
+    if skin_objects is None:
+        skin_objects = {}
+    obj = bone_def["object"]
+    obj_id = obj.GetID()
+    SC = bone_def["SC"]
+    if obj_id not in skin_objects:
+        skin_objects[obj_id] = {
+            "id": obj.GetID(),
+            "object": obj,
+            "SC": SC,
+            "clip": None,
+        }
+    for child_def in bone_def["children"]:
+        extract_extended_skin_objects(child_def, skin_objects=skin_objects)
+    return skin_objects
 
 
 def rl_export_bone_name(bone_name):
@@ -1691,7 +1714,6 @@ def extract_root_bones_from_tree(bone_def: dict, root_bones=None, names=None):
         root_bones = []
     if names is None:
         names = {}
-    bone: RINode = bone_def["bone"]
     name: str = bone_def["name"]
     if name not in names:
         names[name] = 0
@@ -1709,25 +1731,8 @@ def extract_root_bones_from_tree(bone_def: dict, root_bones=None, names=None):
             "Type": get_object_type(obj),
             "Link_ID": link_id,
         })
-    children = bone.GetChildren()
-    # go through bones in the correct order
-    #       very important to recreate bone structure in Blender,
-    #       as it is impossible to match duplicate bone names
-    #       unless the order and hierarchy of the bones matches the
-    #       exported armature *exactly*.
-    done = []
-    for child in children:
-        for child_def in bone_def["children"]:
-            child_bone = child_def["bone"]
-            if child_def not in done and child_bone.GetID() == child.GetID():
-                extract_root_bones_from_tree(child_def, root_bones, names)
-                done.append(child_def)
-                break
-        # bones not explicitly children of the node are sub props
-        for child_def in bone_def["children"]:
-            if child_def not in done:
-                extract_root_bones_from_tree(child_def, root_bones, names)
-                done.append(child_def)
+    for child_def in bone_def["children"]:
+        extract_root_bones_from_tree(child_def, root_bones, names)
     return root_bones
 
 
@@ -1744,10 +1749,10 @@ def get_extended_skin_bones_tree_debug(prop: RIObject):
         t: RVector3 = T.T()
         r: RQuaternion = T.R()
         s: RVector3 = T.S()
-        print(obj.GetName())
-        print(f"loc: {[t.x, t.y, t.z]}")
-        print(f"rot: {[r.x, r.y, r.z, r.w]}")
-        print(f"sca: {[s.x, s.y, s.z]}")
+        utils.log_always(obj.GetName())
+        utils.log_always(f"loc: {[t.x, t.y, t.z]}")
+        utils.log_always(f"rot: {[r.x, r.y, r.z, r.w]}")
+        utils.log_always(f"sca: {[s.x, s.y, s.z]}")
         SC = obj.GetSkeletonComponent()
         root = SC.GetRootBone()
         skin_bones = SC.GetSkinBones()
@@ -1793,6 +1798,23 @@ def get_extended_skin_bones_tree_debug(prop: RIObject):
         return defs[0]
     else:
         return None
+
+
+def decompose_transform(T: RTransform):
+    t: RVector3 = T.T()
+    r: RQuaternion = T.R()
+    s: RVector3 = T.S()
+    return t, r, s
+
+
+def transform_json(T: RTransform):
+    t, r, s = decompose_transform(T)
+    json_data = {
+        "location": [t.x, t.y, t.z],
+        "rotation": [r.x, r.y, r.z, r.w],
+        "scale": [s.x, s.y, s.z],
+    }
+    return json_data
 
 
 def print_nodes(node, level=0):
@@ -1867,7 +1889,8 @@ def end_timeline_scan(current_time):
 
 
 def get_all_camera_light_data(no_animation=False):
-    lights = RScene.FindObjects(EObjectType_Light)
+    lights = RScene.FindObjects(EObjectType_Light | EObjectType_DirectionalLight |
+                                EObjectType_SpotLight | EObjectType_PointLight)
     cameras = RScene.FindObjects(EObjectType_Camera)
     all_data = []
     if lights or cameras:
@@ -2020,6 +2043,20 @@ def get_full_path(rel_path, folder):
             return os.path.normpath(rel_path)
         return os.path.normpath(os.path.join(folder, rel_path))
     return None
+
+
+def store_scene_selection() -> tuple:
+    selection = RScene.GetSelectedObjects()
+    current_time = RGlobal.GetTime()
+    return (selection, current_time)
+
+
+def restore_scene_selection(store: tuple):
+    if store:
+        selection, current_time = store
+        RGlobal.SetTime(current_time)
+        RScene.ClearSelectObjects()
+        RScene.SelectObjects(selection)
 
 
 def get_light_data(light: RILight):

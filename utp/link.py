@@ -16,16 +16,14 @@
 
 from RLPy import *
 del abs
-import PySide2
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from shiboken2 import wrapInstance
-import os, socket, select, struct, time, json, random, atexit, traceback, shutil
+import os, socket, select, struct, time, json, atexit, traceback, shutil
 import signal
 from . import importer, exporter, cc, qt, prefs, tests, utils, vars
 from enum import IntEnum
-import math
 
 SERVER_PORT = 9334
 TIMER_INTERVAL = 1000/60
@@ -71,6 +69,8 @@ class OpCodes(IntEnum):
     CAMERA_SYNC = 231
     FRAME_SYNC = 232
     MOTION = 240
+    REQUEST = 250
+    CONFIRM = 251
 
 
 VISEME_NAME_MAP = {
@@ -1514,8 +1514,12 @@ class DataLink(QObject):
         self.icon_avatar = qt.get_icon("Character.png")
         self.icon_prop = qt.get_icon("Prop.png")
         self.icon_light = qt.get_icon("Light.png")
+        self.icon_atmosphere = qt.get_icon("Atmosphere.png")
         self.icon_camera = qt.get_icon("Camera.png")
         self.icon_all = qt.get_icon("Actor.png")
+        self.icon_scene = qt.get_icon("Scene.png")
+        self.icon_set = qt.get_icon("Set.png")
+        self.icon_eyes = qt.get_icon("Eyes.png")
         self.icon_replace_avatar = qt.get_icon("FullBodyMorphSkin.png")
         self.icon_replace_clothing = qt.get_icon("Clothing.png")
 
@@ -1523,7 +1527,7 @@ class DataLink(QObject):
         grid.setVerticalSpacing(0)
         grid.setColumnStretch(2, 3)
         logo = qt.label(grid, "", row_span=2, width=54, height=54, col=0, row=0)
-        logo.setPixmap(qt.get_pixmap("UnityLogo.png"))
+        logo.setPixmap(qt.get_pixmap("ULogo.png"))
         qt.label(grid, f"DataLink ({vars.VERSION}):", row=0, col=1, style=qt.STYLE_TITLE)
         self.label_header = qt.label(grid, f"Not Connected",
                                      row=0, col=2, style=qt.STYLE_RL_BOLD, no_size=True)
@@ -1542,6 +1546,8 @@ class DataLink(QObject):
         self.button_link = qt.button(grid, "Listen", self.link_start, row=0, col=0, toggle=True, value=False, height=48)
         qt.button(grid, "Stop", self.link_stop, row=0, col=1, width=64, height=48)
 
+        # SEND
+        #
         grid = qt.grid(layout)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(2, 1)
@@ -1564,16 +1570,16 @@ class DataLink(QObject):
                                           icon="Animation.png",
                                           width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                           icon_size=48, align_width=align_width)
-        self.button_pose = qt.icon_button(grid, "Send Pose", self.send_pose,
-                                     row=1, col=0,
-                                     icon="Pose.png",
-                                     width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-                                     icon_size=48, align_width=align_width)
-        self.button_sequence = qt.icon_button(grid, "Live Sequence", self.send_sequence,
-                                         row=1, col=1,
-                                         icon="Motion.png",
-                                         width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-                                         icon_size=48, align_width=align_width)
+        #self.button_pose = qt.icon_button(grid, "Send Pose", self.send_pose,
+        #                             row=1, col=0,
+        #                             icon="Pose.png",
+        #                             width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+        #                             icon_size=48, align_width=align_width)
+        #self.button_sequence = qt.icon_button(grid, "Live Sequence", self.send_sequence,
+        #                                 row=1, col=1,
+        #                                 icon="Motion.png",
+        #                                 width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+        #                                 icon_size=48, align_width=align_width)
 
         if cc.is_cc():
             self.button_update_replace = qt.icon_button(grid, "Update / Replace", self.send_update_replace,
@@ -1582,18 +1588,35 @@ class DataLink(QObject):
                                                    width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                                    icon_size=48, align_width=align_width)
 
+        # LIGHTS & CAMERA
+        #
         qt.label(layout, "Lights & Camera:")
         grid = qt.grid(layout)
         grid.setColumnStretch(0,1)
         grid.setColumnStretch(1,1)
         self.button_sync_lights = qt.icon_button(grid, "Sync Lighting", self.sync_lighting,
-                                            row=0, col=0, icon=self.icon_light,
+                                            row=0, col=0, icon=self.icon_atmosphere,
                                             width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                             icon_size=48, align_width=align_width)
         self.button_sync_camera = qt.icon_button(grid, "Sync Camera", self.send_camera_sync,
-                                            row=0, col=1, icon=self.icon_camera,
+                                            row=0, col=1, icon=self.icon_eyes,
                                             width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                             icon_size=48, align_width=align_width)
+
+        # SCENE
+        #
+        qt.label(layout, "Scene:")
+        grid = qt.grid(layout)
+        grid.setColumnStretch(0,1)
+        grid.setColumnStretch(1,1)
+        self.button_select_scene = qt.icon_button(grid, "Select Scene", self.select_scene,
+                                                row=0, col=0, icon=self.icon_set,
+                                                width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+                                                icon_size=48, align_width=align_width)
+        self.button_send_scene = qt.icon_button(grid, "Send Scene", self.send_scene,
+                                                row=0, col=1, icon=self.icon_scene,
+                                                width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+                                                icon_size=48, align_width=align_width)
 
         qt.stretch(layout, 20)
 
@@ -1736,9 +1759,11 @@ class DataLink(QObject):
         self.button_send.setText(f"Send {type_name}")
         self.button_send.setIcon(icon)
         if num_posable > 1:
-            self.button_pose.setText(f"Send Poses")
+            if self.button_pose:
+                self.button_pose.setText(f"Send Poses")
         else:
-            self.button_pose.setText(f"Send Pose")
+            if self.button_pose:
+                self.button_pose.setText(f"Send Pose")
 
         if selected and avatars:
             icon = self.icon_replace_clothing
@@ -1844,7 +1869,7 @@ class DataLink(QObject):
             self.label_header.setText(f"Connected to {link_service.remote_app} {link_service.remote_version} ({link_service.remote_package})")
             self.label_folder.setText(f"{self.get_remote_folder()}")
         elif self.is_listening():
-            my_hostname = get_hostname()
+            my_hostname = get_hostname() if not vars.DEV else vars.DEV_NAME
             my_ip = get_ip()
             self.button_link.setStyleSheet(qt.STYLE_BUTTON_WAITING)
             self.button_link.setText(f"Listening on {my_hostname} ({my_ip}) ...")
@@ -1860,11 +1885,13 @@ class DataLink(QObject):
             self.label_folder.setText(f"None")
 
         if self.is_sequence_running():
-            self.button_sequence.setText("Stop Sequence")
-            self.button_sequence.toggleOn()
+            if self.button_sequence:
+                self.button_sequence.setText("Stop Sequence")
+                self.button_sequence.toggleOn()
         else:
-            self.button_sequence.setText("Live Sequence")
-            self.button_sequence.toggleOff()
+            if self.button_sequence:
+                self.button_sequence.setText("Live Sequence")
+                self.button_sequence.toggleOff()
 
         self.update_ui()
 
@@ -1914,7 +1941,7 @@ class DataLink(QObject):
             self.receive_invalid(data)
 
         if op_code == OpCodes.TEMPLATE:
-            self.receive_character_template(data)
+            self.receive_actor_template(data)
 
         if op_code == OpCodes.POSE:
             self.receive_pose(data)
@@ -1942,6 +1969,12 @@ class DataLink(QObject):
 
         if op_code == OpCodes.FRAME_SYNC:
             self.receive_frame_sync(data)
+
+        if op_code == OpCodes.REQUEST:
+            self.receive_request(data)
+
+        if op_code == OpCodes.CONFIRM:
+            self.receive_confirm(data)
 
     def on_connected(self):
         self.update_ui()
@@ -2786,6 +2819,56 @@ class DataLink(QObject):
         RGlobal.SetEndTime(end_time)
         RGlobal.SetTime(current_time)
 
+    def select_scene(self):
+        all_actor_objects = cc.get_all_actor_objects()
+        RScene.ClearSelectObjects()
+        RScene.SelectObjects(all_actor_objects)
+
+    def send_scene(self):
+        self.select_scene()
+        if self.is_connected():
+            self.send_scene_request()
+
+    def send_scene_request(self):
+        self.send_request("SCENE")
+
+    def do_send_scene(self, actors_data):
+        motion_actors = []
+        send_actors = []
+
+        scene_selection = cc.store_scene_selection()
+
+        for actor_data in actors_data:
+            name = actor_data["name"]
+            link_id = actor_data["link_id"]
+            character_type = actor_data["type"]
+            confirm = actor_data.get("confirm")
+            actor: LinkActor = LinkActor.find_actor(link_id, search_name=name, search_type=character_type)
+            if actor:
+                if actor.is_light() or actor.is_camera():
+                    utils.log_info(f"Actor: {actor.name} sending light or camera ...")
+                    send_actors.append(actor)
+                elif confirm:
+                    utils.log_info(f"Actor: {actor.name} updating motion ...")
+                    motion_actors.append(actor)
+                else:
+                    utils.log_info(f"Actor: {actor.name} sending actor ...")
+                    send_actors.append(actor)
+        self.sync_lighting()
+        self.send_camera_sync()
+        if motion_actors:
+            RScene.ClearSelectObjects()
+            for actor in motion_actors:
+                actor.select()
+            self.send_motions()
+        if send_actors:
+            RScene.ClearSelectObjects()
+            for actor in send_actors:
+                actor.select()
+            self.send_actors()
+
+        cc.restore_scene_selection(scene_selection)
+
 
     # Character Pose
     #
@@ -2968,7 +3051,7 @@ class DataLink(QObject):
 
         return pose_json
 
-    def receive_character_template(self, data):
+    def receive_actor_template(self, data):
         self.update_link_status(f"Character Templates Received")
         template_json = decode_to_json(data)
         count = template_json["count"]
@@ -2983,6 +3066,68 @@ class DataLink(QObject):
                 utils.log_info(f" - character using expression drivers: {actor.use_drivers}")
             else:
                 utils.log_error(f"Unable to find actor: {name} ({link_id})")
+
+    def encode_request_data(self, actors, request_type):
+        actors_data = []
+        data = {
+            "type": request_type,
+            "actors": actors_data,
+        }
+        actor: LinkActor
+        for actor in actors:
+            actors_data.append({
+                "name": actor.name,
+                "type": actor.get_type(),
+                "link_id": actor.get_link_id(),
+            })
+        return encode_from_json(data)
+
+    def send_request(self, request_type):
+        # get actors
+        actors = self.get_selected_actors()
+        if actors:
+            self.update_link_status(f"Sending Request")
+            self.send_notify(f"Request")
+            # send request
+            request_data = self.encode_request_data(actors, request_type)
+            self.send(OpCodes.REQUEST, request_data)
+            # store the actors
+            self.data.sequence_actors = actors
+            self.data.sequence_type = request_type
+
+    def receive_request(self, data):
+        self.update_link_status(f"Receiving Request ...")
+        json_data = decode_to_json(data)
+        request_type = json_data["type"]
+        actors_data = json_data["actors"]
+        for actor_data in actors_data:
+            name = actor_data["name"]
+            link_id = actor_data["link_id"]
+            character_type = actor_data["type"]
+            actor = LinkActor.find_actor(link_id, search_name=name, search_type=character_type)
+            actor_data["confirm"] = actor is not None
+            utils.log_info(f"Actor: {name} " + ("Confirmed!" if actor_data["confirm"] else "Missing!"))
+            if actor:
+                actor_type = actor.get_type()
+                if actor.get_link_id() != link_id:
+                    actor_data["update_link_id"] = actor.get_link_id()
+                if actor.name != name:
+                    actor_data["update_name"] = actor.name
+                if actor_type != character_type:
+                    actor_data["update_type"] = actor_type
+        self.send(OpCodes.CONFIRM, encode_from_json(json_data))
+
+    def receive_confirm(self, data):
+        json_data = decode_to_json(data)
+        request_type = json_data["type"]
+        actors_data = json_data["actors"]
+        for actor_data in actors_data:
+            new_link_id = actor_data.get("new_link_id")
+            new_name = actor_data.get("new_name")
+            id_tree = actor_data.get("id_tree")
+        if request_type == "SCENE":
+            self.do_send_scene(actors_data)
+        return
 
     def receive_pose(self, data):
         self.update_link_status(f"Receiving Pose ...")

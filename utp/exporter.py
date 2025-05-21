@@ -697,6 +697,7 @@ class Exporter:
         options2 = (EExportFbxOptions2__None | EExportFbxOptions2_UnityPreset
                                              | EExportFbxOptions2_ResetBoneScale
                                              | EExportFbxOptions2_YUp
+                                             | EExportFbxOptions2_RenameDuplicateMaterialName
                                             #| EExportFbxOptions2_ResetSelfillumination
                                              | EExportFbxOptions2_ExtraWordForUnityAndUnreal)
 
@@ -1115,8 +1116,8 @@ class Exporter:
                                      camera_data["dof_near_blur"],
                                      camera_data["dof_far_transition"],
                                      camera_data["dof_near_transition"],
-                                     camera_data["dof_min_blend_distance"],
-                                     camera_data["fov"]) # Blur Edge Sampling Scale
+                                     camera_data["dof_min_blend_distance"], # Blur Edge Sampling Scale
+                                     camera_data["fov"])
             frames_bytes.extend(frame_bytes)
         frames_header = struct.pack("!I", len(frames_bytes))
         binary_bytes.extend(frames_header)

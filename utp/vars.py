@@ -18,7 +18,7 @@ from RLPy import *
 
 VERSION = "0.0.1"
 DEV = False
-#DEV = True
+DEV_NAME = "SOUPDEV"
 AVATAR_TYPES = {
     EAvatarType__None: "None",
     EAvatarType_Standard: "Standard",

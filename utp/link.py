@@ -2339,6 +2339,12 @@ class DataLink(QObject):
         else:
             #cc.deduplicate_scene()
             actors = self.get_selected_actors()
+
+            # because it is faster to send all the lights and cameras at once (because only one scene scan)
+            lights_cameras = [ actor for actor in actors if (actor.is_light() or actor.is_camera()) ]
+            if lights_cameras:
+                self.send_lights_cameras(lights_cameras)
+
             actor: LinkActor
             for actor in actors:
                 if actor.is_avatar():
@@ -2347,11 +2353,6 @@ class DataLink(QObject):
                     self.send_prop(actor)
                 else:
                     utils.log_error("Unknown Actor type!")
-
-            # because it is faster to send all the lights and cameras at once (because only one scene scan)
-            lights_cameras = [ actor for actor in actors if (actor.is_light() or actor.is_camera()) ]
-            if lights_cameras:
-                self.send_lights_cameras(lights_cameras)
 
     def send_update_replace(self):
         avatars = {}

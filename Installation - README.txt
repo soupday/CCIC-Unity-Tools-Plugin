@@ -20,7 +20,7 @@ Close iClone and/or Character Creator.
 
 In the extracted/cloned folder (which contains this readme), double click on the 'Install.bat' file (do not move the .bat or .ps1 files; the installer will link to the folder they are run from).  This will cause a UAC (User Account Control) check on wether you wish to make changes to the device. Click 'Yes' to continue.
 
-** If you have any doubts about the nature of the changes being made then open the 'InstallScript.ps1' file (in this folder) in notepad or VS Code (or similar) and examine the code.
+** If you have any doubts about the nature of the changes being made; firstly ensure that you downloaded or cloned this package from https://github.com/soupday/CCIC-Unity-Tools-Plugin; then open the 'InstallScript.ps1' file (in this folder) in notepad or VS Code (or similar) and examine the code.
 
 ** The UAC check allows the script to:
   - Examine the registry for the installation location of iClone and/or Character Creator
@@ -39,7 +39,7 @@ Uninstallation
 
 In the extracted/cloned folder (which contains this readme), double click on the 'Install.bat' file.  This will cause a UAC check on wether you wish to make changes to the device. Click 'Yes' to continue.
 
-** If you have any doubts about the nature of the changes being made then open the 'UnInstallScript.ps1' file (in this folder) in notepad or VS Code (or similar) and examine the code.
+** If you have any doubts about the nature of the changes being made; firstly ensure that you downloaded or cloned this package from https://github.com/soupday/CCIC-Unity-Tools-Plugin; then open the 'UnInstallScript.ps1' file (in this folder) in notepad or VS Code (or similar) and examine the code.
 
 ** The UAC check allows the script to:
   - Examine the registry for the installation location of iClone and/or Character Creator

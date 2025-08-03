@@ -3402,6 +3402,20 @@ def get_data_link():
     return LINK
 
 
+def link_stop():
+    global LINK
+    running = False
+    visible = False
+    if LINK:
+        utils.log_info("Stopping Data-link!")
+        running = LINK.is_listening()
+        visible = LINK.is_shown()
+        LINK.link_stop()
+        LINK.close()
+        LINK = None
+    return running, visible
+
+
 def debug(debug_json):
     utils.log_always("")
     utils.log_always("DEBUG")

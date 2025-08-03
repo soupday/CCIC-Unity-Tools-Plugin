@@ -15,7 +15,7 @@
 # along with CC/iC-Unity-Pipeline-Plugin.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from utp import prefs, qt, importer, exporter, link
+from utp import prefs, qt, importer, exporter, link, cc, tests, vars
 
 
 rl_plugin_info = { "ap": "iClone", "ap_version": "8.0" }
@@ -47,6 +47,8 @@ def initialize_plugin():
     qt.menu_separator(plugin_menu)
     qt.add_menu_action(plugin_menu, "Settings", action=menu_settings, icon=icon_settings)
     qt.add_menu_action(plugin_menu, "Toolbar", action=menu_toolbar, toggle=True, on=True)
+    qt.menu_separator(plugin_menu)
+    qt.add_menu_action(plugin_menu, "Reload", action=menu_reload)
 
     toolbar = qt.find_add_toolbar("Unity Pipeline Toolbar", show_hide=fetch_toolbar_state)
     qt.clear_toolbar(toolbar)
@@ -123,6 +125,24 @@ def show_settings():
     preferences = prefs.get_preferences()
     if not preferences.is_shown():
         preferences.show()
+
+
+def menu_reload():
+    import importlib
+    print("Reloading Scripts...")
+    running, visible = link.link_stop()
+    modules = [ vars, prefs, cc, qt, tests, importer, exporter, link ]
+    for module in modules:
+        importlib.reload(module)
+    print("Done Reloading Scripts.")
+    print("")
+    initialize_plugin()
+    if running or visible:
+        LINK = link.get_data_link()
+        if visible:
+            LINK.show()
+        if running:
+            LINK.link_start()
 
 
 def run_script():

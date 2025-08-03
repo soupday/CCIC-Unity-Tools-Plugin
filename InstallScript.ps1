@@ -1,4 +1,4 @@
-# elevation handled by the calling .bat file to allow script execution policy override 
+# elevation handled by the calling .bat file to allow script execution policy override
 <#
 param([switch]$elevated)
 
@@ -28,7 +28,8 @@ $subFolder = "OpenPlugin"
 
 # script vars
 $scriptFolder = $PSScriptRoot
-$scriptFolderName = Split-Path -Path $scriptFolder -Leaf
+#$scriptFolderName = Split-Path -Path $scriptFolder -Leaf
+$scriptFolderName = "Unity Pipeline Plugin"
 
 function Add-Junction($keyPath){
     $keyExists = Test-Path -Path $keyPath
@@ -51,16 +52,32 @@ function Add-Junction($keyPath){
                 New-Item -Path "$entryValue\$subFolder" -ItemType Directory
             }
 
+            # is this a Git Clone? Install as junction, otherwise install as full copy
+            $isGitClone = Test-Path -Path "$scriptFolder\.git"
+            if ($isGitClone){
+                Write-Host "`n Installing Git Clone Plugin as junction link."
+            }else{
+                Write-Host "`n Installing Plugin Files directly."
+            }
+
             # create a directory junction to the folder containing this script
             $junctionPath = "$entryValue\$subFolder\$scriptFolderName"
+
             $junctionExists = Test-Path -Path $junctionPath
-            
             if($junctionExists){
                 Write-Host "`n Folder link $junctionPath already exists."
-            }else{
-                cmd /c mklink /J "$junctionPath" "$scriptFolder" | Out-Null
-
-                Write-Host "`n Folder link $junctionPath has been created."
+                cmd /c rmdir /s /q $junctionPath
+                Write-Host "`n Folder link $junctionPath deleted."
+            }
+            $junctionExists = Test-Path -Path $junctionPath
+            if(!$junctionExists){
+                if ($isGitClone){
+                    cmd /c mklink /J "$junctionPath" "$scriptFolder" | Out-Null
+                    Write-Host "`n Folder link $junctionPath has been created."
+                }else{
+                    Copy-Item -Path "$scriptFolder" -Destination "$junctionPath" -Recurse
+                    Write-Host "`n Folder $junctionPath has been copied."
+                }
             }
         }else{
             Write-Host "`n Cannot find $valueName in the registry key... skipping."

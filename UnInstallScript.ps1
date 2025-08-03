@@ -1,4 +1,4 @@
-# elevation handled by the calling .bat file to allow script execution policy override 
+# elevation handled by the calling .bat file to allow script execution policy override
 <#
 param([switch]$elevated)
 
@@ -27,8 +27,9 @@ $valueName = "Install Path"
 $subFolder = "OpenPlugin"
 
 # script vars
-$scriptFolder = $PSScriptRoot
-$scriptFolderName = Split-Path -Path $scriptFolder -Leaf
+#$scriptFolder = $PSScriptRoot
+#$scriptFolderName = Split-Path -Path $scriptFolder -Leaf
+$scriptFolderName = "Unity Pipeline Plugin"
 
 function Remove-Junction($keyPath){
     $keyExists = Test-Path -Path $keyPath
@@ -44,11 +45,10 @@ function Remove-Junction($keyPath){
             # find directory junction
             $junctionPath = "$entryValue\$subFolder\$scriptFolderName"
             $junctionExists = Test-Path -Path $junctionPath
-            
+
             if($junctionExists){
-                cmd /c rmdir $junctionPath
-`
-                Write-Host "`n Folder link $junctionPath deleted."
+                cmd /c rmdir /s /q $junctionPath
+                Write-Host "`n Folder/Link $junctionPath deleted."
             }else{
                 Write-Host "`n Expected folder link $junctionPath is absent."
             }

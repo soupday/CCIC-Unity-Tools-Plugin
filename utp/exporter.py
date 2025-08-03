@@ -683,7 +683,7 @@ class Exporter:
         utils.log(f"Exporting {('Avatar' if is_avatar else 'Prop' if is_prop else 'Camera')} - {obj.GetName()} - FBX: {file_path}")
 
         options1 = (EExportFbxOptions__None | EExportFbxOptions_AutoSkinRigidMesh
-                                           #| EExportFbxOptions_RemoveAllUnused
+                                            | EExportFbxOptions_RemoveAllUnused
                                             | EExportFbxOptions_ExportPbrTextureAsImageInFormatDirectory
                                             | EExportFbxOptions_ExportRootMotion
                                            #| EExportFbxOptions_RemoveUnusedMorph

@@ -189,6 +189,13 @@ class LinkActor():
     def get_object(self) -> RIObject:
         return self.object
 
+    def select(self):
+        if self.object:
+            objects = list(RScene.GetSelectedObjects())
+            if self.object not in objects:
+                objects.append(self.object)
+            RScene.SelectObjects(objects)
+
     def update(self, name, link_id):
         self.name = name
         self.set_link_id(link_id)
@@ -1509,6 +1516,12 @@ class DataLink(QObject):
     def hide(self):
         self.window.Hide()
 
+    def close(self):
+        if self.window:
+            self.window.Close()
+            self.window = None
+        self.on_exit()
+
     def is_shown(self):
         return self.window.IsVisible()
 
@@ -1566,12 +1579,12 @@ class DataLink(QObject):
         grid.setColumnStretch(0,1)
         grid.setColumnStretch(1,1)
         align_width = 150
-        self.button_send = qt.icon_button(grid, "Send Character", self.send_actor,
+        self.button_send = qt.icon_button(grid, "Send Character", self.send_actors,
                                      row=0, col=0,
                                      icon=self.icon_avatar,
                                      width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                      icon_size=48, align_width=align_width)
-        self.button_animation = qt.icon_button(grid, "Send Motion", self.send_motion_export,
+        self.button_animation = qt.icon_button(grid, "Send Motion", self.send_motions,
                                           row=0, col=1,
                                           icon="Animation.png",
                                           width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
@@ -2312,19 +2325,19 @@ class DataLink(QObject):
         self.send(OpCodes.CAMERA, export_data)
         self.update_link_status(f"Camera Sent: {actor.name}")
 
-    def send_attached_actors(self, actor: LinkActor):
-        """Send attached lights and cameras.
-           Attached props are sent as part of the parent prop.
-           (Avatars can only be linked, not attached)
-           TODO: something ...
-        """
-        objects = RScene.FindChildObjects(EObjectType_Prop | EObjectType_MDProp |
-                                          EObjectType_Light |
-                                          EObjectType_Camera)
-        for obj in objects:
-            name = obj.GetName()
-            if "Preview" in name: continue
-            actor = LinkActor(obj)
+    def send_actors(self):
+        scene_selection = cc.store_scene_selection()
+
+        cc.deduplicate_scene_objects()
+        actors = self.get_selected_actors()
+
+        # because it is faster to send all the lights and cameras at once (because only one scene scan)
+        lights_cameras = [ actor for actor in actors if (actor.is_light() or actor.is_camera()) ]
+        if lights_cameras:
+            self.send_lights_cameras(lights_cameras)
+
+        actor: LinkActor
+        for actor in actors:
             if actor.is_avatar():
                 self.send_avatar(actor)
             elif actor.is_prop():
@@ -2332,33 +2345,7 @@ class DataLink(QObject):
             else:
                 utils.log_error("Unknown Actor type!")
 
-        # because it is faster to send all the lights and cameras at once (because only one scene scan)
-        lights_cameras = [ o for o in objects if (cc.is_light(o) or cc.is_camera(o)) ]
-        if lights_cameras:
-            selection = [ LinkActor(o) for o in lights_cameras ]
-            self.send_lights_cameras(selection)
-
-    def send_actor(self):
-        if not self.is_connected():
-            #gob.go_b()
-            pass
-        else:
-            #cc.deduplicate_scene()
-            actors = self.get_selected_actors()
-
-            # because it is faster to send all the lights and cameras at once (because only one scene scan)
-            lights_cameras = [ actor for actor in actors if (actor.is_light() or actor.is_camera()) ]
-            if lights_cameras:
-                self.send_lights_cameras(lights_cameras)
-
-            actor: LinkActor
-            for actor in actors:
-                if actor.is_avatar():
-                    self.send_avatar(actor)
-                elif actor.is_prop():
-                    self.send_prop(actor)
-                else:
-                    utils.log_error("Unknown Actor type!")
+        cc.restore_scene_selection(scene_selection)
 
     def send_update_replace(self):
         avatars = {}
@@ -2408,11 +2395,17 @@ class DataLink(QObject):
             self.send(OpCodes.UPDATE_REPLACE, update_data)
             self.update_link_status(f"Update Sent: {actor.name}")
 
-    def send_motion_export(self):
-        actors = self.get_selected_actors()
+    def send_motions(self, actors=None):
+        if actors and type(actors) is not list:
+            actors = [actors]
+        if not actors:
+            actors = self.get_selected_actors()
         actor: LinkActor
         for actor in actors:
-            motion_name = actor.name + "_motion"
+            if self.motion_prefix:
+                motion_name = actor.name + "_" + self.motion_prefix + "_motion"
+            else:
+                motion_name = actor.name + "_motion"
             self.update_link_status(f"Exporting Motion: {motion_name}", True)
             self.send_notify(f"Exporting Motion: {motion_name}")
             # Determine export path

@@ -346,13 +346,16 @@ def frame(layout: QLayout, style = "", line_width = 1):
     return f, l
 
 
-def group(layout: QLayout, style="", title=""):
+def group(layout: QLayout, style="", title="", vertical=True, horizontal=False):
     g = QGroupBox()
     if style:
         g.setStyleSheet(style)
     if title:
         g.setTitle(title)
-    l = QVBoxLayout(g)
+    if vertical:
+        l = QVBoxLayout(g)
+    elif horizontal:
+        l = QHBoxLayout(g)
     layout.addWidget(g)
     return g, l
 
@@ -803,7 +806,6 @@ class DColorPicker(QWidget):
         self.button.clicked.connect(self.button_clicked)
         if label:
             self.label.clicked.connect(self.label_clicked)
-        print("DONE")
 
     def update_color(self):
         color = self.get_color()
@@ -824,11 +826,9 @@ class DColorPicker(QWidget):
             self.button.setStyleSheet(f"background-color: {color.name()}")
 
     def label_clicked(self):
-        print("LABEL CLICKED")
         self.set_color(self.default_color)
 
     def button_clicked(self):
-        print("BUTTON CLICKED")
         color = self.get_color()
         color: QColor = QColorDialog.getColor(initial=color)
         if color.isValid():
@@ -1053,7 +1053,7 @@ def hide(*widgets):
             w.setVisible(False)
 
 
-def browse_folder(title, start_folder):
+def browse_folder(title, start_folder=""):
     folder = QFileDialog.getExistingDirectory(None, title, start_folder, QFileDialog.Option.ShowDirsOnly)
     return folder
 

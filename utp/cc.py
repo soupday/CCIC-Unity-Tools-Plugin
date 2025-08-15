@@ -1414,9 +1414,10 @@ def set_link_id(obj: RIObject, link_id):
     if obj:
         data_block: RDataBlock = add_data_block(obj, "DataLink")
         add_attr(data_block, "LinkID", EAttributeType_String, EAttributeFlag_Default)
-        value = RVariant(str(link_id))
-        data_block.SetData("LinkID", value)
-        data_block.SetData("LinkIDName", obj.GetName())
+        link_id_value = RVariant(str(link_id))
+        link_id_name_value = RVariant(obj.GetName())
+        data_block.SetData("LinkID", link_id_value)
+        data_block.SetData("LinkIDName", link_id_name_value)
 
 
 def find_object_by_link_id(link_id):

@@ -15,7 +15,7 @@
 # along with CC/iC-Unity-Pipeline-Plugin.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from utp import prefs, qt, importer, exporter, link, cc, tests, vars
+from utp import prefs, qt, importer, exporter, link, cc, tests, utils, vars
 
 
 rl_plugin_info = { "ap": "iClone", "ap_version": "8.0" }
@@ -131,7 +131,7 @@ def menu_reload():
     import importlib
     print("Reloading Scripts...")
     running, visible = link.link_stop()
-    modules = [ vars, prefs, cc, qt, tests, importer, exporter, link ]
+    modules = [ vars, prefs, utils, cc, qt, tests, importer, exporter, link ]
     for module in modules:
         importlib.reload(module)
     print("Done Reloading Scripts.")

@@ -2660,7 +2660,8 @@ class DataLink(QObject):
         for actor in actors:
             if actor.is_light():
                 light_data = cc.get_light_data(actor.get_light())
-            data["lights"].append(light_data)
+                if light_data:
+                    data["lights"].append(light_data)
 
         return data
 
@@ -2761,10 +2762,11 @@ class DataLink(QObject):
         self.send_notify(f"Sync View Camera")
         view_camera: RICamera = RScene.GetCurrentCamera()
         camera_data = cc.get_camera_data(view_camera)
-        pivot = self.get_selection_pivot()
-        camera_data["target"] = [pivot.x, pivot.y, pivot.z]
-        self.send(OpCodes.CAMERA_SYNC, encode_from_json(camera_data))
-        self.send_frame_sync()
+        if camera_data:
+            pivot = self.get_selection_pivot()
+            camera_data["target"] = [pivot.x, pivot.y, pivot.z]
+            self.send(OpCodes.CAMERA_SYNC, encode_from_json(camera_data))
+            self.send_frame_sync()
 
     def decode_camera_sync_data(self, data):
         data = decode_to_json(data)

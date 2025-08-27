@@ -907,7 +907,9 @@ class Exporter:
         root_json = json_data.get_root_json()
 
         if self.light:
-            root_json["Object"][self.character_id]["Light"] = cc.get_light_data(self.light)
+            light_data = cc.get_light_data(self.light)
+            if light_data:
+                root_json["Object"][self.character_id]["Light"] = light_data
 
         if json_data is None:
             utils.log_error("No valid json data could be found for the export ...")
@@ -1019,6 +1021,7 @@ class Exporter:
         light_index = -1
         light_data = None
         num_frames = len(self.all_camera_light_data)
+        print(self.all_camera_light_data)
         for i, data in enumerate(self.all_camera_light_data[frame]["lights"]):
             if data["link_id"] == link_id:
                 light_data = data

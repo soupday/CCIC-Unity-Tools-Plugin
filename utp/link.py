@@ -1569,11 +1569,18 @@ class DataLink(QObject):
         #
         grid = qt.grid(layout)
         grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(2, 1)
+        grid.setColumnStretch(2, 2)
+        grid.setColumnStretch(4, 1)
         qt.label(grid, "Send:", row=0, col=0)
-        qt.label(grid, f"Motion Prefix:", row=0, col=1)
+        qt.label(grid, "With:", style=qt.STYLE_NONE, row=0, col=1)
+        EXPORT_MODE = prefs.CC_EXPORT_MODE if cc.is_cc() else prefs.IC_EXPORT_MODE
+        self.combo_ic_export_mode = qt.combobox(grid, EXPORT_MODE, options = [
+                                                        "Bind Pose", "Current Pose", "Animation"
+                                                    ], update=self.update_combo_ccic_export_mode,
+                                                    row=0, col=2)
+        qt.label(grid, f"Motion Prefix:", row=0, col=3)
         self.textbox_motion_prefix = qt.textbox(grid, self.motion_prefix,
-                                                row=0, col=2, update=self.update_motion_prefix)
+                                                row=0, col=4, update=self.update_motion_prefix)
 
         grid = qt.grid(layout)
         grid.setColumnStretch(0,1)
@@ -1875,6 +1882,13 @@ class DataLink(QObject):
 
     def update_motion_prefix(self):
         self.motion_prefix = self.textbox_motion_prefix.text()
+
+    def update_combo_ccic_export_mode(self):
+        if cc.is_cc():
+            prefs.CC_EXPORT_MODE = self.combo_ic_export_mode.currentText()
+        else:
+            prefs.IC_EXPORT_MODE = self.combo_ic_export_mode.currentText()
+        prefs.write_temp_state()
 
     def show_link_state(self):
         link_service = self.get_link_service()

@@ -876,6 +876,11 @@ class Exporter:
         # required for correct Unity avatar generation
         export_fbx_setting.SetIncludeMotionPath(utils.get_resource_path("motion", "0_T-Pose.rlMotion"))
 
+        if (self.avatar and
+            hasattr(export_fbx_setting, "SetExportLevel") and
+            hasattr(self.avatar, "GetMaxSubdivMeshLevel")):
+            export_fbx_setting.SetExportLevel(0)
+
         result = RFileIO.ExportFbxFile(obj, file_path, export_fbx_setting)
         self.exported_paths.append(file_path)
 

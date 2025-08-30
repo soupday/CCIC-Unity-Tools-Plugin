@@ -1575,7 +1575,7 @@ class DataLink(QObject):
         qt.label(grid, "With:", style=qt.STYLE_NONE, row=0, col=1)
         EXPORT_MODE = prefs.CC_EXPORT_MODE if cc.is_cc() else prefs.IC_EXPORT_MODE
         self.combo_ic_export_mode = qt.combobox(grid, EXPORT_MODE, options = [
-                                                        "Bind Pose", "Current Pose", "Animation"
+                                                        "No Animation", "Current Pose", "Animation"
                                                     ], update=self.update_combo_ccic_export_mode,
                                                     row=0, col=2)
         qt.label(grid, f"Motion Prefix:", row=0, col=3)

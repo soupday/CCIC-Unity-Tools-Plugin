@@ -128,7 +128,7 @@ class Preferences(QObject):
             qt.label(grid, "Export With:", style=qt.STYLE_NONE,
                      row=1, col=0)
             self.combo_cc_export_mode = qt.combobox(grid, CC_EXPORT_MODE, options = [
-                                                        "Bind Pose", "Current Pose", "Animation"
+                                                        "No Animation", "Current Pose", "Animation"
                                                     ], update=self.update_combo_cc_export_mode,
                                                     row=1, col=1)
 
@@ -150,7 +150,7 @@ class Preferences(QObject):
             qt.label(grid, "Export With:", style=qt.STYLE_NONE,
                      row=1, col=0)
             self.combo_ic_export_mode = qt.combobox(grid, IC_EXPORT_MODE, options = [
-                                                        "Bind Pose", "Current Pose", "Animation"
+                                                        "No Animation", "Current Pose", "Animation"
                                                     ], update=self.update_combo_ic_export_mode,
                                                     row=1, col=1)
 

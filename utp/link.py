@@ -1569,7 +1569,7 @@ class DataLink(QObject):
         #
         grid = qt.grid(layout)
         grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(2, 2)
+        grid.setColumnStretch(2, 1)
         grid.setColumnStretch(4, 1)
         qt.label(grid, "Send:", row=0, col=0)
         qt.label(grid, "With:", style=qt.STYLE_NONE, row=0, col=1)

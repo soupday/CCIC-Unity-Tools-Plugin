@@ -355,12 +355,12 @@ class Exporter:
 
     def on_show_hide(self, visible):
         if visible:
-            qt.toggle_toolbar_action("Blender Pipeline Toolbar", "Export to Blender", True)
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Export to Unity", True)
             if not self.callback_id:
                 self.callback = ExporterEventCallback(self)
                 self.callback_id = REventHandler.RegisterCallback(self.callback)
         else:
-            qt.toggle_toolbar_action("Blender Pipeline Toolbar", "Export to Blender", False)
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Export to Unity", False)
             if self.callback_id:
                 REventHandler.UnregisterCallback(self.callback_id)
                 self.callback = None
@@ -418,7 +418,7 @@ class Exporter:
             self.preset_current_animation()
 
     def create_progress_window(self):
-        title = "Blender Export"
+        title = "Unity Export"
         self.window_progress, layout = qt.window(title, width=500, height=150, fixed=True)
         self.window_progress.SetFeatures(EDockWidgetFeatures_NoFeatures)
         qt.place_window(self.window_progress, 0.5, 0.333)

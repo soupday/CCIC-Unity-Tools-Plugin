@@ -163,7 +163,7 @@ class Importer:
     def create_options_window(self):
         W = 500
         H = 300
-        TITLE = f"Blender Pipeline Import FBX"
+        TITLE = f"Unity Pipeline Import FBX"
         self.window_options, layout = qt.window(TITLE, width=W, height=H, fixed=True)
         self.window_options.SetFeatures(RLPy.EDockWidgetFeatures_Closable)
 
@@ -192,7 +192,7 @@ class Importer:
         self.window_options.Show()
 
     def create_progress_window(self):
-        title = "Blender Auto-setup Character Import - Progress"
+        title = "Unity Auto-setup Character Import - Progress"
         self.window_progress, layout = qt.window(title, width=500, height=180, fixed=True)
         self.window_progress.SetFeatures(RLPy.EDockWidgetFeatures_NoFeatures)
 

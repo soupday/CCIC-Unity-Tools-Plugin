@@ -1480,6 +1480,9 @@ class DataLink(QObject):
     info_label_type: QLabel = None
     info_label_link_id: QLabel = None
     #
+    combo_ccic_export_level: QComboBox = None
+    combo_ccic_export_mode: QComboBox = None
+    #
     button_send: QPushButton = None
     button_rigify: QPushButton = None
     button_pose: QPushButton = None
@@ -1568,19 +1571,28 @@ class DataLink(QObject):
         # SEND
         #
         grid = qt.grid(layout)
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(2, 1)
-        grid.setColumnStretch(4, 1)
+        grid.setColumnStretch(0, 0)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(2, 0)
+        grid.setColumnStretch(3, 1)
+        grid.setColumnStretch(4, 0)
+        grid.setColumnStretch(5, 2)
         qt.label(grid, "Send:", row=0, col=0)
-        qt.label(grid, "With:", style=qt.STYLE_NONE, row=0, col=1)
+        EXPORT_LEVEL = prefs.CC_EXPORT_MAX_SUB_LEVEL if cc.is_cc() else prefs.IC_EXPORT_MAX_SUB_LEVEL
+        EXPORT_LEVELS = { -1: "SubD Current", 0: "SubD 0", 1: "SubD 1", 2: "SubD 2" }
+        self.combo_ccic_export_level = qt.combobox(grid, EXPORT_LEVELS[EXPORT_LEVEL], options = [
+                                                        "SubD Current", "SubD 0", "SubD 1", "SubD 2"
+                                                    ], update=self.update_combo_ccic_export_max_sub_level,
+                                                    row=0, col=1, style=qt.STYLE_RL_BOLD)
+        qt.label(grid, "With:", style=qt.STYLE_NONE, row=0, col=2)
         EXPORT_MODE = prefs.CC_EXPORT_MODE if cc.is_cc() else prefs.IC_EXPORT_MODE
-        self.combo_ic_export_mode = qt.combobox(grid, EXPORT_MODE, options = [
+        self.combo_ccic_export_mode = qt.combobox(grid, EXPORT_MODE, options = [
                                                         "No Animation", "Current Pose", "Animation"
                                                     ], update=self.update_combo_ccic_export_mode,
-                                                    row=0, col=2)
-        qt.label(grid, f"Motion Prefix:", row=0, col=3)
+                                                    row=0, col=3, style=qt.STYLE_RL_BOLD)
+        qt.label(grid, f"Prefix:", row=0, col=4)
         self.textbox_motion_prefix = qt.textbox(grid, self.motion_prefix,
-                                                row=0, col=4, update=self.update_motion_prefix)
+                                                row=0, col=5, update=self.update_motion_prefix)
 
         grid = qt.grid(layout)
         grid.setColumnStretch(0,1)
@@ -1883,11 +1895,20 @@ class DataLink(QObject):
     def update_motion_prefix(self):
         self.motion_prefix = self.textbox_motion_prefix.text()
 
+    def update_combo_ccic_export_max_sub_level(self):
+        text = self.combo_ccic_export_level.currentText()
+        levels = { "SubD Current": -1, "SubD 0": 0, "SubD 1": 1, "SubD 2": 2 }
+        if cc.is_cc():
+            prefs.CC_EXPORT_MAX_SUB_LEVEL = levels[text]
+        else:
+            prefs.IC_EXPORT_MAX_SUB_LEVEL = levels[text]
+        prefs.write_temp_state()
+
     def update_combo_ccic_export_mode(self):
         if cc.is_cc():
-            prefs.CC_EXPORT_MODE = self.combo_ic_export_mode.currentText()
+            prefs.CC_EXPORT_MODE = self.combo_ccic_export_mode.currentText()
         else:
-            prefs.IC_EXPORT_MODE = self.combo_ic_export_mode.currentText()
+            prefs.IC_EXPORT_MODE = self.combo_ccic_export_mode.currentText()
         prefs.write_temp_state()
 
     def show_link_state(self):

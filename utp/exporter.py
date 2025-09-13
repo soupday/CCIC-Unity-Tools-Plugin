@@ -877,8 +877,7 @@ class Exporter:
         export_fbx_setting.SetIncludeMotionPath(utils.get_resource_path("motion", "0_T-Pose.rlMotion"))
 
         if (self.avatar and
-            hasattr(export_fbx_setting, "SetExportLevel") and
-            hasattr(self.avatar, "GetMaxSubdivMeshLevel")):
+            hasattr(export_fbx_setting, "SetExportLevel")):
             export_fbx_setting.SetExportLevel(0)
 
         result = RFileIO.ExportFbxFile(obj, file_path, export_fbx_setting)

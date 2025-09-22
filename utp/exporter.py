@@ -1025,7 +1025,6 @@ class Exporter:
         light_index = -1
         light_data = None
         num_frames = len(self.all_camera_light_data)
-        print(self.all_camera_light_data)
         for i, data in enumerate(self.all_camera_light_data[frame]["lights"]):
             if data["link_id"] == link_id:
                 light_data = data
@@ -1143,7 +1142,6 @@ class Exporter:
         for frame_data in self.all_camera_light_data:
             time = frame_data["time"]
             frame = frame_data["frame"]
-            print(f"Frame: {frame}, active: {camera_data['active']}")
             camera_data = frame_data["cameras"][camera_index]
             frame_bytes = struct.pack("!IIfffffffffff?ffffffff?",
                                      time,

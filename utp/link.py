@@ -2895,9 +2895,6 @@ class DataLink(QObject):
         motion_actors = []
         send_actors = []
 
-        print("REQUEST TYPE: " + request_type)
-        print(actors_data)
-
         scene_selection = cc.store_scene_selection()
 
         for actor_data in actors_data:
@@ -2913,7 +2910,7 @@ class DataLink(QObject):
                 method = "UPDATE" if confirm else "SEND"
                 # skinned props must always be replaced
                 # as the first frame of animation is the models bind pose
-                if skinned:
+                if skinned and actor.is_prop():
                     method = "SEND"
                 # send actors always sends new or replacement
                 if request_type == "ACTORS":

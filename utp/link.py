@@ -1598,12 +1598,12 @@ class DataLink(QObject):
         grid.setColumnStretch(0,1)
         grid.setColumnStretch(1,1)
         align_width = 150
-        self.button_send = qt.icon_button(grid, "Send Character", self.send_actors,
+        self.button_send = qt.icon_button(grid, "Send Character", self.send_actors_request,
                                      row=0, col=0,
                                      icon=self.icon_avatar,
                                      width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                      icon_size=48, align_width=align_width)
-        self.button_animation = qt.icon_button(grid, "Send Motion", self.send_motions,
+        self.button_animation = qt.icon_button(grid, "Send Motion", self.send_motions_request,
                                           row=0, col=1,
                                           icon="Animation.png",
                                           width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
@@ -1675,18 +1675,26 @@ class DataLink(QObject):
 
         self.show_link_state()
 
-    def on_show_hide(self, visible):
-        if visible:
-            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity DataLink", True)
+
+    def register_callbacks(self, register=True):
+        if register:
             if not self.callback_id:
                 self.callback = LinkEventCallback(self)
                 self.callback_id = REventHandler.RegisterCallback(self.callback)
         else:
-            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity DataLink", False)
             if self.callback_id:
                 REventHandler.UnregisterCallback(self.callback_id)
                 self.callback = None
                 self.callback_id = None
+
+
+    def on_show_hide(self, visible):
+        if visible:
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity DataLink", True)
+        else:
+            qt.toggle_toolbar_action("Unity Pipeline Toolbar", "Unity DataLink", False)
+        self.register_callbacks(visible)
+
 
     def on_exit(self):
         if self.callback_id:
@@ -2360,11 +2368,15 @@ class DataLink(QObject):
         self.send(OpCodes.CAMERA, export_data)
         self.update_link_status(f"Camera Sent: {actor.name}")
 
-    def send_actors(self):
-        scene_selection = cc.store_scene_selection()
-
+    def send_actors_request(self):
         cc.deduplicate_scene_objects()
-        actors = self.get_selected_actors()
+        self.send_request("ACTORS")
+
+    def send_actors(self, actors=None):
+        if actors and type(actors) is not list:
+            actors = [actors]
+        if not actors:
+            actors = self.get_selected_actors()
 
         # because it is faster to send all the lights and cameras at once (because only one scene scan)
         lights_cameras = [ actor for actor in actors if (actor.is_light() or actor.is_camera()) ]
@@ -2379,8 +2391,6 @@ class DataLink(QObject):
                 self.send_prop(actor)
             else:
                 utils.log_error("Unknown Actor type!")
-
-        cc.restore_scene_selection(scene_selection)
 
     def send_update_replace(self):
         avatars = {}
@@ -2430,11 +2440,16 @@ class DataLink(QObject):
             self.send(OpCodes.UPDATE_REPLACE, update_data)
             self.update_link_status(f"Update Sent: {actor.name}")
 
+    def send_motions_request(self):
+        cc.deduplicate_scene_objects()
+        self.send_request("MOTIONS")
+
     def send_motions(self, actors=None):
         if actors and type(actors) is not list:
             actors = [actors]
         if not actors:
             actors = self.get_selected_actors()
+
         actor: LinkActor
         for actor in actors:
             if self.motion_prefix:
@@ -2857,6 +2872,11 @@ class DataLink(QObject):
         RGlobal.SetTime(current_time)
 
     def select_scene(self):
+        # check callbacks
+        self.register_callbacks()
+        # force update ui
+        self.update_ui()
+
         all_actor_objects = cc.get_all_actor_objects()
         RScene.ClearSelectObjects()
         RScene.SelectObjects(all_actor_objects)
@@ -2867,11 +2887,16 @@ class DataLink(QObject):
             self.send_scene_request()
 
     def send_scene_request(self):
+        cc.deduplicate_scene_objects()
+        self.select_scene()
         self.send_request("SCENE")
 
-    def do_send_scene(self, actors_data):
+    def do_send_update_actors(self, actors_data, request_type):
         motion_actors = []
         send_actors = []
+
+        print("REQUEST TYPE: " + request_type)
+        print(actors_data)
 
         scene_selection = cc.store_scene_selection()
 
@@ -2880,29 +2905,48 @@ class DataLink(QObject):
             link_id = actor_data["link_id"]
             character_type = actor_data["type"]
             confirm = actor_data.get("confirm")
+            skinned = actor_data.get("skinned")
             actor: LinkActor = LinkActor.find_actor(link_id, search_name=name, search_type=character_type)
             if actor:
+
+                # send method rules:
+                method = "UPDATE" if confirm else "SEND"
+                # skinned props must always be replaced
+                # as the first frame of animation is the models bind pose
+                if skinned:
+                    method = "SEND"
+                # send actors always sends new or replacement
+                if request_type == "ACTORS":
+                    method = "SEND"
+                # lights and camera's always replace entirely, even for just motion
                 if actor.is_light() or actor.is_camera():
-                    utils.log_info(f"Actor: {actor.name} sending light or camera ...")
+                    method = "SEND"
+
+                if method == "SEND":
+                    if actor.is_light():
+                        utils.log_info(f"Actor: {actor.name} sending light ...")
+                    if actor.is_camera():
+                        utils.log_info(f"Actor: {actor.name} sending camera ...")
+                    if actor.is_prop():
+                        utils.log_info(f"Actor: {actor.name} sending prop ...")
+                    if actor.is_avatar():
+                        utils.log_info(f"Actor: {actor.name} sending avatar ...")
                     send_actors.append(actor)
-                elif confirm:
-                    utils.log_info(f"Actor: {actor.name} updating motion ...")
+                elif method == "UPDATE":
+                    if actor.is_prop():
+                        utils.log_info(f"Actor: {actor.name} updating prop motion ...")
+                    if actor.is_avatar():
+                        utils.log_info(f"Actor: {actor.name} updating avatar motion ...")
                     motion_actors.append(actor)
-                else:
-                    utils.log_info(f"Actor: {actor.name} sending actor ...")
-                    send_actors.append(actor)
-        self.sync_lighting()
-        self.send_camera_sync()
+
+        if request_type == "SCENE":
+            self.sync_lighting()
+            self.send_camera_sync()
+
         if motion_actors:
-            RScene.ClearSelectObjects()
-            for actor in motion_actors:
-                actor.select()
-            self.send_motions()
+            self.send_motions(motion_actors)
         if send_actors:
-            RScene.ClearSelectObjects()
-            for actor in send_actors:
-                actor.select()
-            self.send_actors()
+            self.send_actors(send_actors)
 
         cc.restore_scene_selection(scene_selection)
 
@@ -3162,8 +3206,8 @@ class DataLink(QObject):
             new_link_id = actor_data.get("new_link_id")
             new_name = actor_data.get("new_name")
             id_tree = actor_data.get("id_tree")
-        if request_type == "SCENE":
-            self.do_send_scene(actors_data)
+        if request_type in ["SCENE", "MOTIONS", "ACTORS"]:
+            self.do_send_update_actors(actors_data, request_type)
         return
 
     def receive_pose(self, data):

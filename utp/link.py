@@ -2897,6 +2897,10 @@ class DataLink(QObject):
 
         scene_selection = cc.store_scene_selection()
 
+        if request_type == "SCENE":
+            self.sync_lighting()
+            self.send_camera_sync()
+
         for actor_data in actors_data:
             name = actor_data["name"]
             link_id = actor_data["link_id"]
@@ -2936,14 +2940,13 @@ class DataLink(QObject):
                         utils.log_info(f"Actor: {actor.name} updating avatar motion ...")
                     motion_actors.append(actor)
 
-        if request_type == "SCENE":
-            self.sync_lighting()
-            self.send_camera_sync()
-
         if motion_actors:
             self.send_motions(motion_actors)
         if send_actors:
             self.send_actors(send_actors)
+
+        if request_type == "SCENE":
+            self.send_camera_sync()
 
         cc.restore_scene_selection(scene_selection)
 

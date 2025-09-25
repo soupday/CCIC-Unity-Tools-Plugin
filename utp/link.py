@@ -1459,6 +1459,7 @@ class LinkEventCallback(REventCallback):
             self.target.update_ui()
 
 
+
 class DataLink(QObject):
     window: RIDockWidget = None
     host_name: str = "localhost"
@@ -1492,7 +1493,9 @@ class DataLink(QObject):
     button_morph: QPushButton = None
     button_morph_update: QPushButton = None
     button_sync_lights: QPushButton = None
-    button_sync_camera: QPushButton = None
+    button_sync_cameras: QPushButton = None
+    button_sync_viewport: QPushButton = None
+    button_sync_scene: QPushButton = None
     #
     icon_avatar: QIcon = None
     icon_prop: QIcon = None
@@ -1608,38 +1611,6 @@ class DataLink(QObject):
                                           icon="Animation.png",
                                           width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                           icon_size=48, align_width=align_width)
-        #self.button_pose = qt.icon_button(grid, "Send Pose", self.send_pose,
-        #                             row=1, col=0,
-        #                             icon="Pose.png",
-        #                             width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-        #                             icon_size=48, align_width=align_width)
-        #self.button_sequence = qt.icon_button(grid, "Live Sequence", self.send_sequence,
-        #                                 row=1, col=1,
-        #                                 icon="Motion.png",
-        #                                 width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-        #                                 icon_size=48, align_width=align_width)
-
-        if cc.is_cc():
-            self.button_update_replace = qt.icon_button(grid, "Update / Replace", self.send_update_replace,
-                                                   row=2, col=0,
-                                                   icon=self.icon_replace_avatar,
-                                                   width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-                                                   icon_size=48, align_width=align_width)
-
-        # LIGHTS & CAMERA
-        #
-        qt.label(layout, "Lights & Camera:")
-        grid = qt.grid(layout)
-        grid.setColumnStretch(0,1)
-        grid.setColumnStretch(1,1)
-        self.button_sync_lights = qt.icon_button(grid, "Sync Lighting", self.sync_lighting,
-                                            row=0, col=0, icon=self.icon_atmosphere,
-                                            width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-                                            icon_size=48, align_width=align_width)
-        self.button_sync_camera = qt.icon_button(grid, "Sync Camera", self.send_camera_sync,
-                                            row=0, col=1, icon=self.icon_eyes,
-                                            width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
-                                            icon_size=48, align_width=align_width)
 
         # SCENE
         #
@@ -1647,12 +1618,20 @@ class DataLink(QObject):
         grid = qt.grid(layout)
         grid.setColumnStretch(0,1)
         grid.setColumnStretch(1,1)
-        self.button_select_scene = qt.icon_button(grid, "Select Scene", self.select_scene,
-                                                row=0, col=0, icon=self.icon_set,
+        self.button_sync_lights = qt.icon_button(grid, "Sync Lights", self.sync_lighting,
+                                                row=0, col=0, icon=self.icon_light,
                                                 width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                                 icon_size=48, align_width=align_width)
-        self.button_send_scene = qt.icon_button(grid, "Send Scene", self.send_scene,
-                                                row=0, col=1, icon=self.icon_scene,
+        self.button_sync_cameras = qt.icon_button(grid, "Sync Cameras", self.sync_cameras,
+                                                row=0, col=1, icon=self.icon_camera,
+                                                width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+                                                icon_size=48, align_width=align_width)
+        self.button_sync_viewport = qt.icon_button(grid, "Sync View", self.send_camera_sync,
+                                                row=1, col=0, icon=self.icon_eyes,
+                                                width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
+                                                icon_size=48, align_width=align_width)
+        self.button_sync_scene = qt.icon_button(grid, "Sync Scene", self.send_scene,
+                                                row=1, col=1, icon=self.icon_scene,
                                                 width=qt.ICON_BUTTON_HEIGHT, height=qt.ICON_BUTTON_HEIGHT,
                                                 icon_size=48, align_width=align_width)
 
@@ -1825,7 +1804,8 @@ class DataLink(QObject):
                    self.button_pose, self.button_sequence,
                    self.button_animation, self.button_update_replace,
                    self.button_morph, self.button_morph_update,
-                   self.button_sync_lights, self.button_sync_camera,
+                   self.button_sync_lights, self.button_sync_cameras,
+                   self.button_sync_viewport, self.button_sync_scene,
                    self.combobox_version, self.label_version)
 
         if self.is_connected():
@@ -1837,7 +1817,8 @@ class DataLink(QObject):
                 qt.enable(self.button_morph, self.button_morph_update)
             if num_rigable > 0:
                 qt.enable(self.button_rigify)
-            qt.enable(self.button_sync_lights, self.button_sync_camera)
+            qt.enable(self.button_sync_lights, self.button_sync_cameras,
+                      self.button_sync_viewport, self.button_sync_scene)
 
         # context info
 
@@ -2691,7 +2672,8 @@ class DataLink(QObject):
         all_lights = RScene.FindObjects(EObjectType_Light)
         all_light_id = []
         for light in all_lights:
-            all_light_id.append(cc.get_link_id(light))
+            if cc.is_light(light):
+                all_light_id.append(cc.get_link_id(light))
 
         VSC: RIVisualSettingComponent = RGlobal.GetVisualSettingComponent()
         try:
@@ -2719,8 +2701,18 @@ class DataLink(QObject):
         lights = RScene.FindObjects(EObjectType_Light)
         actors = []
         for light in lights:
-            actor = LinkActor(light)
-            actors.append(actor)
+            if cc.is_light(light):
+                actor = LinkActor(light)
+                actors.append(actor)
+        return actors
+
+    def get_all_cameras(self):
+        cameras = RScene.FindObjects(EObjectType_Camera)
+        actors = []
+        for camera in cameras:
+            if cc.is_camera(camera):
+                actor = LinkActor(camera)
+                actors.append(actor)
         return actors
 
     def export_hdri(self, lights_data):
@@ -2782,14 +2774,22 @@ class DataLink(QObject):
             lights_data["ibl_rotation"] = ibl_rotation
             lights_data["ibl_scale"] = ibl_scale.x
 
-    def sync_lighting(self, include_lights=True):
+    def sync_lighting(self):
         self.update_link_status(f"Synchronizing Lights")
         self.send_notify(f"Sync Lighting")
         actors = self.get_all_lights()
-        light_actors_data = self.get_lights_data(actors)
-        light_actors_data["use_lights"] = include_lights
-        self.export_hdri(light_actors_data)
-        self.send(OpCodes.LIGHTING, encode_from_json(light_actors_data))
+        # can't process this yet
+        #light_actors_data = self.get_lights_data(actors)
+        #light_actors_data["use_lights"] = include_lights
+        #self.export_hdri(light_actors_data)
+        #self.send(OpCodes.LIGHTING, encode_from_json(light_actors_data))
+        self.send_actors(actors)
+
+    def sync_cameras(self):
+        self.update_link_status(f"Synchronizing Cameras")
+        self.send_notify(f"Sync Cameras")
+        actors = self.get_all_cameras()
+        self.send_actors(actors)
 
     def get_selection_pivot(self) -> RVector3:
         selected_objects = RScene.GetSelectedObjects()
@@ -2898,7 +2898,7 @@ class DataLink(QObject):
         scene_selection = cc.store_scene_selection()
 
         if request_type == "SCENE":
-            self.sync_lighting()
+            #self.sync_lighting()
             self.send_camera_sync()
 
         for actor_data in actors_data:

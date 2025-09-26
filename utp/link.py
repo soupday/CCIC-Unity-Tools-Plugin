@@ -132,12 +132,6 @@ FACE_DRIVERS = {
     "Right_Eyeball_Look_L": "CC_Base_R_Eye",
 }
 
-def sigterm_handler(sig, frame):
-  print("SIGTERM received, connection closed!")
-
-# Install the signal handler
-signal.signal(signal.SIGTERM, sigterm_handler)
-
 
 class LinkActor():
     name: str = "Name"
